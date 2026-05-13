@@ -57,6 +57,18 @@ Si el proyecto está en otra región, migra los datos antes de lanzar para cumpl
 
 ---
 
+## GitHub (código + despliegues automáticos)
+
+En la carpeta del repo ya hay historial Git local. Para crear el remoto y subir `main`:
+
+1. Instala y autentica la CLI: `brew install gh` (si hace falta) y `gh auth login`.
+2. Ejecuta: `bash scripts/github-bootstrap.sh`  
+   Crea `https://github.com/<tu-usuario>/clientpilot-ai` (público) y hace `git push`.
+
+Después, en **Vercel** → tu proyecto → **Settings → Git**: conecta ese repositorio para que cada `push` a `main` despliegue solo.
+
+---
+
 ## Vercel (app en producción)
 
 1. Enlaza el repo: `vercel link` (o conecta el Git desde el dashboard).
@@ -69,7 +81,7 @@ Despliegue desde terminal (con sesión iniciada en Vercel CLI): `vercel --prod -
 
 ## Railway (worker + Redis)
 
-La CLI requiere login interactivo la primera vez: `railway login`.
+La CLI requiere login interactivo la primera vez: `railway login`. Opcionalmente, tras autenticarte: `bash scripts/railway-worker-bootstrap.sh` (crea/enlaza proyecto, intenta añadir Redis y resume pasos).
 
 1. En la carpeta del repo: `railway init --name clientpilot-worker` (o crea el proyecto en la web y **New service → Empty** desde el mismo repo).
 2. Añade **Redis** al proyecto (plugin “Redis”); Railway inyecta `REDIS_URL` en el servicio que enlaces, o copia la URL manualmente en las variables del worker.
