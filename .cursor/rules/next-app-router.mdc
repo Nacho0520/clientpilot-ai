@@ -1,0 +1,41 @@
+---
+description: Next.js 15 App Router conventions for ClientPilot.
+globs: ["app/**/*"]
+alwaysApply: false
+---
+
+# Next.js App Router — ClientPilot Conventions
+
+## Server vs Client Components
+- Default to **Server Components**. Add `"use client"` only when needed (hooks, browser events, Radix interactive state).
+- Never import `lib/supabase/server.ts` or `lib/supabase/admin.ts` from a Client Component.
+
+## Route Actions
+- Server Actions live in `actions.ts` colocated next to the page they serve (`app/dashboard/settings/actions.ts`).
+- Mark actions with `"use server"`. Validate inputs with `zod` before touching the DB.
+- Return `{ error: string }` on failure, redirect on success.
+
+## API Routes
+- All webhook routes must set `export const runtime = "nodejs"` (Twilio, Meta, Stripe all require Node APIs).
+- Webhook routes: read raw body with `req.text()` **before** any other parsing (Stripe requires raw body for signature).
+- Return `NextResponse.json({ received: true }, { status: 200 })` from Stripe/Meta/Twilio even on no-op events — 
+  returning 4xx causes retries.
+
+## Route Structure
+```
+app/
+  (auth)/login/          — public auth pages
+  onboarding/            — post-signup wizard
+  dashboard/             — protected, layout.tsx checks session
+  admin/                 — internal admin, uses lib/admin-guard.ts
+  api/
+    twilio/webhook/      — Twilio WhatsApp inbound
+    meta/webhook/        — Meta Cloud API inbound (GET verify + POST)
+    stripe/webhook/      — Stripe events
+    google/callback/     — OAuth return
+    cron/followups/      — Vercel cron trigger
+```
+
+## Auth Guard
+`app/dashboard/layout.tsx` and `app/admin/layout.tsx` redirect to `/login` if no session.
+Do not add redundant session checks inside individual pages — trust the layout.

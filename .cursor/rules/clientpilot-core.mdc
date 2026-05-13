@@ -1,0 +1,47 @@
+---
+description: ClientPilot AI — product context, stack, and module map. Always active.
+alwaysApply: true
+---
+
+# ClientPilot AI — Core Context
+
+## What it is
+Multi-tenant SaaS. WhatsApp AI receptionist for aesthetic clinics, dental practices, and SMBs.
+Each **business** has one WhatsApp number (Twilio or Meta Cloud API). Inbound messages run through
+an AI pipeline (Claude) that classifies intent, builds a context-aware reply, and handles
+appointment booking via Google Calendar.
+
+## Stack
+- **Framework**: Next.js 15 App Router, React 19, TypeScript strict
+- **Database**: Supabase (Postgres + Auth + RLS). Types generated via `npm run db:types`.
+- **AI**: Anthropic Claude (`ANTHROPIC_MODEL` env, default `claude-sonnet-4-5`)
+- **Messaging**: Twilio WhatsApp (primary) + Meta Cloud API (secondary, `meta_phone_number_id`)
+- **Queues**: BullMQ + IORedis. Three queues: `followups`, `reminders`, `reviews`
+- **Worker**: `workers/index.ts` — run separately with `npm run worker`
+- **Payments**: Stripe (plans: `starter` / `pro` / `clinic`)
+- **Email**: Resend
+- **Calendar**: Google Calendar OAuth (tokens encrypted at rest with `TOKEN_ENCRYPTION_KEY`)
+
+## Module map
+| Concern | Location |
+|---|---|
+| Domain types | `lib/types.ts` |
+| Env validation | `lib/env.ts` (also exports `PLAN_LIMITS`) |
+| AI pipeline | `lib/ai/pipeline.ts` → intent → prompt → respond |
+| Supabase server | `lib/supabase/server.ts` (anon+cookie) |
+| Supabase admin | `lib/supabase/admin.ts` (service-role, bypasses RLS) |
+| Queue definitions | `lib/queue.ts` |
+| Worker entrypoint | `workers/index.ts` |
+| Webhooks | `app/api/twilio/webhook/`, `app/api/meta/webhook/`, `app/api/stripe/webhook/` |
+| Calendar | `lib/calendar/booking.ts`, `lib/calendar/google.ts` |
+| WhatsApp senders | `lib/twilio.ts`, `lib/whatsapp/meta.ts` |
+| Auth middleware | `middleware.ts` → `lib/supabase/middleware.ts` |
+| Migrations | `supabase/migrations/` |
+
+## Multi-tenancy rule
+Every business-scoped table has `business_id`. **Always filter by `business_id` explicitly**
+when using the admin client (it bypasses RLS). The server client enforces RLS automatically.
+
+## Plans
+`starter`: 500 AI responses/month | `pro`: 2 000 | `clinic`: unlimited
+Counter: `businesses.ai_responses_this_month`. Resets on `invoice.paid` Stripe event.

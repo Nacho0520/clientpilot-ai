@@ -1,0 +1,56 @@
+---
+description: Supabase client usage, RLS, and type generation for ClientPilot.
+globs: ["lib/supabase/**/*", "lib/ai/**/*", "workers/**/*", "app/api/**/*"]
+alwaysApply: false
+---
+
+# Supabase Patterns
+
+## Which client to use
+| Context | Import | Notes |
+|---|---|---|
+| Server Component / Action / Route Handler | `lib/supabase/server.ts` → `createClient()` | Uses anon key + cookie session; RLS enforced |
+| Webhook / Worker (trusted server, no session) | `lib/supabase/admin.ts` → `createAdminClient()` | Service-role key; **bypasses RLS** |
+| Middleware | `lib/supabase/middleware.ts` → `updateSession()` | Cookie refresh only |
+| Client Component | `lib/supabase/client.ts` | Browser anon key |
+
+**Never** import `admin.ts` from a Client Component or expose `SUPABASE_SERVICE_ROLE_KEY` to the browser.
+
+## Admin client — explicit scoping
+Because admin bypasses RLS, **always** add `.eq("business_id", businessId)` or `.eq("owner_id", userId)` 
+on every query. Omitting this leaks cross-tenant data.
+
+```ts
+// GOOD
+const { data } = await supa.from("conversations")
+  .select("*")
+  .eq("business_id", business.id)
+  .eq("customer_phone", phone)
+  .maybeSingle();
+
+// BAD — returns all tenants' conversations
+const { data } = await supa.from("conversations").select("*").eq("customer_phone", phone);
+```
+
+## Type generation
+After any migration, run:
+```bash
+npm run db:types
+# output: lib/supabase/database.types.ts
+```
+Import generated types as needed; do not manually duplicate table shapes.
+
+## Migrations
+New migrations go in `supabase/migrations/` with sequential numeric prefix: `0004_<description>.sql`.
+Always include RLS policies for any new business-scoped table:
+```sql
+alter table public.<table> enable row level security;
+create policy "owner access" on public.<table>
+  for all using (business_id in (
+    select id from public.businesses where owner_id = auth.uid()
+  ));
+```
+
+## Secrets
+Never `console.log` or include in error messages: `SUPABASE_SERVICE_ROLE_KEY`, `TOKEN_ENCRYPTION_KEY`,
+or any OAuth tokens. Google OAuth tokens are stored encrypted via `lib/crypto.ts`.

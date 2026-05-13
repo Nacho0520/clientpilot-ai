@@ -1,0 +1,23 @@
+# Railway deployment configuration for the BullMQ worker.
+# The Next.js app is deployed separately on Vercel.
+# This file configures the worker service on Railway.
+#
+# Required env vars in the Railway service dashboard (see scripts/push-env-to-vercel.sh for the full list):
+#   ANTHROPIC_API_KEY, ANTHROPIC_MODEL
+#   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+#   REDIS_URL  (use Railway's Redis plugin — it injects this automatically)
+#   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM
+#   META_SYSTEM_USER_TOKEN, META_VERIFY_TOKEN
+#   (En Vercel, además: META_APP_SECRET para validar el webhook POST de Meta)
+#   TOKEN_ENCRYPTION_KEY
+#   RESEND_API_KEY, RESEND_FROM_EMAIL
+#   NEXT_PUBLIC_APP_URL  (your Vercel production URL)
+
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "npm run worker"
+healthcheckPath = ""
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

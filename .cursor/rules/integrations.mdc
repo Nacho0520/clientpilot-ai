@@ -1,0 +1,53 @@
+---
+description: Webhook security, idempotency, and integration conventions for Twilio, Meta, Stripe, and Google.
+globs: ["lib/twilio.ts", "lib/whatsapp/**/*", "lib/stripe.ts", "lib/calendar/**/*", "lib/email.ts", "app/api/**/*"]
+alwaysApply: false
+---
+
+# Integrations — Webhooks and External APIs
+
+## Webhook security — mandatory checks
+
+### Twilio (`app/api/twilio/webhook/`)
+- Validate `X-Twilio-Signature` with `twilio.validateRequest(token, sig, url, params)`.
+- Skip in `NODE_ENV !== "production"` only (dev tunnels). Never skip in prod.
+- Parse body as `URLSearchParams` (Twilio sends `application/x-www-form-urlencoded`).
+
+### Meta Cloud API (`app/api/meta/webhook/`)
+- GET request: return the `hub.challenge` if `hub.verify_token === META_VERIFY_TOKEN`.
+- POST request: validate `X-Hub-Signature-256` with HMAC-SHA256 of **raw** body using `META_APP_SECRET` (see `app/api/meta/webhook/route.ts`). In production, missing secret returns 503; missing/invalid signature returns 403.
+- Business lookup: use `metaPhoneNumberId` (field `phone_number_id`) not the `To` number.
+
+### Stripe (`app/api/stripe/webhook/`)
+- Always call `stripe.webhooks.constructEvent(rawBody, sig, webhookSecret)`.
+- `rawBody` must be the raw string from `req.text()` — never parse as JSON first.
+- Return `200` for unhandled event types (not `400`).
+- Stripe retries on non-2xx for up to 3 days.
+
+## Idempotency
+- Stripe subscription events are idempotent by design (upsert, not insert).
+- For Twilio/Meta: the pipeline does `upsert` on `(business_id, customer_phone)` for conversations — safe to replay.
+- BullMQ jobs (reminders, reviews) should be deduplicated with `jobId` to avoid double-sending on retry:
+  ```ts
+  await remindersQueue.add("send", data, { jobId: `reminder-${appointmentId}` });
+  ```
+
+## AI Pipeline — message flow
+```
+Webhook → runInboundPipeline() → classifyIntent() → buildSystemPrompt() → generateReply()
+       → persist messages → update conversation status → sendWhatsApp()
+```
+The pipeline returns `{ ok: false }` on `no_business` or `plan_limit_reached` — **do not throw**.
+Caller sends the fallback `replyText` if present.
+
+## Google OAuth
+- Tokens are AES-256 encrypted before storing in `businesses.google_oauth_tokens_encrypted`.
+- Use `lib/crypto.ts` for encrypt/decrypt — never store tokens in plaintext.
+- OAuth redirect URI must match `GOOGLE_OAUTH_REDIRECT_URI` exactly (including http vs https).
+
+## Adding a new integration
+1. Add env vars to `.env.example` with a comment.
+2. Add to `lib/env.ts` under the relevant key.
+3. Create `lib/<provider>.ts` for the SDK client.
+4. Webhook route in `app/api/<provider>/webhook/route.ts`.
+5. Validate signature first — before any business logic.
