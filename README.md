@@ -20,6 +20,10 @@ Tu recepcionista IA para WhatsApp — diseñada para clínicas estéticas y dent
 4. Apply migrations: `npx supabase db reset`
 5. `npm run dev` (web), `npm run worker` (background jobs).
 
+## GitHub y despliegue
+- Subir el código: `gh auth login` y luego `bash scripts/github-bootstrap.sh` (ver [DEPLOY.md](DEPLOY.md)).
+- Vercel: conecta el repo en el dashboard para despliegues automáticos por push.
+
 ## Module Status
 - [x] Module 1 — Core Infrastructure
 - [ ] Module 2 — WhatsApp Webhook + AI Response Engine
