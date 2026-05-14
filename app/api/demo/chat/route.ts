@@ -2,21 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { anthropic, MODEL } from "@/lib/anthropic";
 import type Anthropic from "@anthropic-ai/sdk";
 
-const rateLimitMap = new Map<string, { count: number; reset: number }>();
-const LIMIT = 10;
-const WINDOW_MS = 15 * 60 * 1000;
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.reset) {
-    rateLimitMap.set(ip, { count: 1, reset: now + WINDOW_MS });
-    return false;
-  }
-  if (entry.count >= LIMIT) return true;
-  entry.count++;
-  return false;
-}
+// No server-side rate limiting is applied here. In-memory Maps reset on every
+// cold start and provide no protection in serverless deployments. Apply a
+// platform-level rate limiter (e.g. Vercel WAF or Upstash Ratelimit) before
+// exposing this endpoint in production.
 
 const DEMO_SYSTEM = `Eres Sofía, recepcionista virtual de Clínica Demo, una clínica estética en Madrid.
 Servicios disponibles:
@@ -34,10 +23,6 @@ Si te piden cita, di que vas a revisar disponibilidad y propón un par de huecos
 No reveles que eres una IA salvo que te lo pregunten directamente.`;
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
-  if (isRateLimited(ip)) {
-    return NextResponse.json({ reply: "Has alcanzado el límite de mensajes del demo. Regístrate para continuar." }, { status: 429 });
-  }
   const { messages } = (await req.json()) as { messages: Array<{ role: "user" | "assistant"; content: string }> };
   try {
     const res = await anthropic.messages.create({

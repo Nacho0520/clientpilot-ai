@@ -77,7 +77,12 @@ export function DashboardSidebar({
 
       {/* Plan badge */}
       <div className="p-3 border-t space-y-2">
-        <div className={cn("rounded-md px-3 py-2 text-xs font-medium", PLAN_COLORS[plan] ?? PLAN_COLORS.starter)}>
+        <div className={cn(
+          "rounded-md px-3 py-2 text-xs font-medium",
+          planLimit !== null && aiResponsesThisMonth / planLimit > 0.8
+            ? "bg-amber-100 text-amber-700"
+            : PLAN_COLORS[plan] ?? PLAN_COLORS.starter
+        )}>
           <p className="uppercase tracking-wide">{plan}</p>
           {planLimit !== null && (
             <p className="mt-0.5 text-[11px] font-normal opacity-80">

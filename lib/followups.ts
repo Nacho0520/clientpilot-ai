@@ -1,5 +1,6 @@
 import { createAdminClient } from "./supabase/admin";
 import { sendWhatsApp } from "./whatsapp/index";
+import type { Database } from "./supabase/database.types";
 
 const TEMPLATES = {
   follow_up_a: (name: string | null) =>
@@ -14,40 +15,37 @@ const TEMPLATES = {
     `Hola${name ? ` ${name}` : ""}, te recordamos tu cita: ${when}. ¡Te esperamos!`,
 };
 
-type BusinessSettings = {
-  review_link_url?: string | null;
+type BusinessSettingsRow = Database["public"]["Tables"]["business_settings"]["Row"];
+type BusinessRow = Database["public"]["Tables"]["businesses"]["Row"];
+type ConversationRow = Database["public"]["Tables"]["conversations"]["Row"];
+type FollowUpQueueRow = Database["public"]["Tables"]["follow_up_queue"]["Row"];
+type AppointmentRow = Database["public"]["Tables"]["appointments"]["Row"];
+
+// Join shape: businesses with a nested business_settings projection (1-to-1 relation).
+type WhatsAppBusiness = Pick<BusinessRow, "twilio_whatsapp_number"> & {
+  business_settings?:
+    | Pick<BusinessSettingsRow, "review_link_url">
+    | Pick<BusinessSettingsRow, "review_link_url">[]
+    | null;
 };
 
-type WhatsAppBusiness = {
-  twilio_whatsapp_number?: string | null;
-  business_settings?: BusinessSettings | BusinessSettings[] | null;
-};
-
-type FollowUpConversation = {
-  id: string;
-  business_id: string;
-  customer_phone: string;
-  customer_name: string | null;
-  follow_ups_sent: number | null;
+// Join shape: conversation row with nested businesses join.
+type FollowUpConversation = Pick<
+  ConversationRow,
+  "id" | "business_id" | "customer_phone" | "customer_name" | "follow_ups_sent"
+> & {
   businesses?: WhatsAppBusiness | null;
 };
 
-type FollowUpQueueItem = {
-  id: string;
-  template_type: keyof typeof TEMPLATES;
+// Join shape: follow_up_queue row with nested conversations join.
+type FollowUpQueueItem = Pick<FollowUpQueueRow, "id" | "template_type"> & {
   conversations?: FollowUpConversation | null;
 };
 
-type ReminderAppointment = {
-  id: string;
-  status: string;
-  scheduled_at: string;
-  customer_phone: string;
-  customer_name: string | null;
-  conversation_id: string | null;
-  business_id: string;
+// Join shape: appointments row with nested businesses and conversations joins.
+type ReminderAppointment = AppointmentRow & {
   businesses?: WhatsAppBusiness | null;
-  conversations?: { customer_name: string | null } | null;
+  conversations?: Pick<ConversationRow, "customer_name"> | null;
 };
 
 /** Scan: leads inactive >24h with no appointment get queued for follow-up. */

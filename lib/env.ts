@@ -1,7 +1,8 @@
 // Single place to read & validate environment variables.
 // Throws at boot if a required var is missing in production.
 
-function required(name: string): string {
+/** Returns the env var value or empty string. Use assertEnv() or assertWorkerEnv() for validation at startup. */
+function getEnv(name: string): string {
   // Note: we don't throw at module load to allow `next build` to collect page
   // data without secrets present. Downstream SDKs will fail clearly at runtime
   // if a required value is actually missing.
@@ -13,20 +14,20 @@ const billingDisabled =
 
 export const env = {
   appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-  supabaseUrl: required("NEXT_PUBLIC_SUPABASE_URL"),
-  supabaseAnonKey: required("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
-  supabaseServiceRoleKey: required("SUPABASE_SERVICE_ROLE_KEY"),
-  anthropicApiKey: required("ANTHROPIC_API_KEY"),
+  supabaseUrl: getEnv("NEXT_PUBLIC_SUPABASE_URL"),
+  supabaseAnonKey: getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+  supabaseServiceRoleKey: getEnv("SUPABASE_SERVICE_ROLE_KEY"),
+  anthropicApiKey: getEnv("ANTHROPIC_API_KEY"),
   anthropicModel: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-5",
   twilio: {
-    sid: required("TWILIO_ACCOUNT_SID"),
-    token: required("TWILIO_AUTH_TOKEN"),
-    from: required("TWILIO_WHATSAPP_FROM"),
+    sid: getEnv("TWILIO_ACCOUNT_SID"),
+    token: getEnv("TWILIO_AUTH_TOKEN"),
+    from: getEnv("TWILIO_WHATSAPP_FROM"),
   },
   google: {
-    clientId: required("GOOGLE_OAUTH_CLIENT_ID"),
-    clientSecret: required("GOOGLE_OAUTH_CLIENT_SECRET"),
-    redirectUri: required("GOOGLE_OAUTH_REDIRECT_URI"),
+    clientId: getEnv("GOOGLE_OAUTH_CLIENT_ID"),
+    clientSecret: getEnv("GOOGLE_OAUTH_CLIENT_SECRET"),
+    redirectUri: getEnv("GOOGLE_OAUTH_REDIRECT_URI"),
   },
   // Stripe vars are always optional in env object; their presence is checked
   // via isBillingEnabled before use. When BILLING_DISABLED=true, they're never accessed.
@@ -39,12 +40,12 @@ export const env = {
     priceClinic: process.env.STRIPE_PRICE_CLINIC ?? "",
   },
   billingDisabled,
-  redisUrl: required("REDIS_URL"),
+  redisUrl: getEnv("REDIS_URL"),
   resend: {
-    apiKey: required("RESEND_API_KEY"),
+    apiKey: getEnv("RESEND_API_KEY"),
     from: process.env.RESEND_FROM_EMAIL ?? "notificaciones@clientpilot.ai",
   },
-  tokenEncryptionKey: required("TOKEN_ENCRYPTION_KEY"),
+  tokenEncryptionKey: getEnv("TOKEN_ENCRYPTION_KEY"),
   meta: {
     systemUserToken: process.env.META_SYSTEM_USER_TOKEN ?? "",
     verifyToken: process.env.META_VERIFY_TOKEN ?? "",

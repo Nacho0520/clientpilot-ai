@@ -26,6 +26,8 @@ if (env.sentry.dsn) {
   });
 }
 
+// ANTHROPIC_API_KEY is not checked here because the worker boots before it's needed.
+// It will throw at call-time in lib/ai/ if missing.
 assertWorkerEnv();
 
 new Worker(

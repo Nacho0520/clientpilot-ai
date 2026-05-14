@@ -6,17 +6,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { sendManualMessage } from "./actions";
 import { format, isToday, isYesterday, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
+import type { Database } from "@/lib/supabase/database.types";
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "success" | "warn"> = {
   active: "default", lead: "warn", converted: "success", closed: "secondary", cold: "secondary",
 };
 
-type ConversationBusiness = {
-  businesses?: { owner_id?: string | null } | null;
-};
-
-type MessageMetadata = {
-  source?: string;
+// Join shape: conversation row with nested businesses join.
+type ConversationWithBusiness = {
+  businesses?: Pick<Database["public"]["Tables"]["businesses"]["Row"], "owner_id"> | null;
 };
 
 function DateDivider({ date }: { date: Date }) {
@@ -43,7 +41,7 @@ export default async function ConversationDetail({ params }: { params: Promise<{
     .eq("id", id)
     .single();
 
-  if (!convo || (convo as ConversationBusiness).businesses?.owner_id !== user?.id) notFound();
+  if (!convo || (convo as ConversationWithBusiness).businesses?.owner_id !== user?.id) notFound();
 
   const { data: messages } = await supa
     .from("messages")
@@ -74,7 +72,7 @@ export default async function ConversationDetail({ params }: { params: Promise<{
           const date = new Date(m.sent_at);
           const prevDate = idx > 0 ? new Date(messages[idx - 1].sent_at) : null;
           const showDivider = !prevDate || !isSameDay(date, prevDate);
-          const isManual = (m.metadata as MessageMetadata | null)?.source === "manual_reply";
+          const isManual = (m.metadata as { source?: string } | null)?.source === "manual_reply";
 
           return (
             <div key={m.id}>

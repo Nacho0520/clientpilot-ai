@@ -11,8 +11,7 @@ const { Client } = pg;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const PROJECT_REF = 'dyujowkydblogmojfgff';
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY 
-  || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5dWpvd2t5ZGJsb2dtb2pmZ2ZmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODYwNTc4NSwiZXhwIjoyMDk0MTgxNzg1fQ.GlclAihbjvO37eP0vIxr77yovEy_tWk5JN1TJL6oK8A';
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DB_PASSWORD = process.env.SUPABASE_DB_PASSWORD || SERVICE_ROLE_KEY;
 
 const CONNECTION_CONFIGS = [

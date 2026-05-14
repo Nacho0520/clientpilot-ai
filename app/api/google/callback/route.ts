@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import { NextResponse, type NextRequest } from "next/server";
 import { oauth2Client, encryptTokens } from "@/lib/calendar/google";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -23,6 +26,7 @@ export async function GET(req: NextRequest) {
         refresh_token: tokens.refresh_token,
         expiry_date: tokens.expiry_date ?? undefined,
       }),
+      google_oauth_invalid: false,
     })
     .eq("id", state);
 

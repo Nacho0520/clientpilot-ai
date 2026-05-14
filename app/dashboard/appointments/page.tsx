@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { updateAppointmentStatus } from "./actions";
+import type { Database } from "@/lib/supabase/database.types";
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "success" | "warn" | "destructive"> = {
   pending: "warn",
@@ -20,8 +21,9 @@ const STATUS_ES: Record<string, string> = {
   no_show: "No show",
 };
 
-type AppointmentService = {
-  services?: { name: string | null } | null;
+// Join shape: appointment row with nested services join.
+type AppointmentWithService = {
+  services?: Pick<Database["public"]["Tables"]["services"]["Row"], "name"> | null;
 };
 
 export default async function AppointmentsPage() {
@@ -54,7 +56,7 @@ export default async function AppointmentsPage() {
                 <CardTitle className="text-base">{a.customer_name ?? a.customer_phone}</CardTitle>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {new Date(a.scheduled_at).toLocaleString("es-ES", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                  {" · "}{(a as AppointmentService).services?.name ?? "Servicio"} ({a.duration_minutes} min)
+                  {" · "}{(a as AppointmentWithService).services?.name ?? "Servicio"} ({a.duration_minutes} min)
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">

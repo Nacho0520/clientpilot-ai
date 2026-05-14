@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { saveBusinessSettings, saveService, deleteService, saveHours, saveWhatsAppNumberForm, saveMetaProviderForm } from "./actions";
+import { saveBusinessInfo, saveAISettings, saveService, deleteService, saveHours, saveWhatsAppNumberForm, saveMetaProviderForm } from "./actions";
 
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -48,7 +48,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <Card>
         <CardHeader><CardTitle>Datos del negocio</CardTitle></CardHeader>
         <CardContent>
-          <form action={saveBusinessSettings} className="space-y-4">
+          <form action={saveBusinessInfo} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label htmlFor="name">Nombre</Label>
@@ -76,12 +76,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <Card>
         <CardHeader><CardTitle>Recepcionista IA</CardTitle><CardDescription>Así se presenta a tus clientes por WhatsApp.</CardDescription></CardHeader>
         <CardContent>
-          <form action={saveBusinessSettings} className="space-y-4">
-            {/* hidden fields to avoid overwriting business data */}
-            <input type="hidden" name="name" value={biz?.name ?? ""} />
-            <input type="hidden" name="phone" value={biz?.phone ?? ""} />
-            <input type="hidden" name="address" value={biz?.address ?? ""} />
-            <input type="hidden" name="google_maps_url" value={biz?.google_maps_url ?? ""} />
+          <form action={saveAISettings} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label htmlFor="ai_name">Nombre de la IA</Label>

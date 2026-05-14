@@ -5,9 +5,12 @@
  * Uso: node scripts/seed.mjs
  */
 
-const SUPABASE_URL = "https://dyujowkydblogmojfgff.supabase.co";
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5dWpvd2t5ZGJsb2dtb2pmZ2ZmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODYwNTc4NSwiZXhwIjoyMDk0MTgxNzg1fQ.GlclAihbjvO37eP0vIxr77yovEy_tWk5JN1TJL6oK8A";
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://dyujowkydblogmojfgff.supabase.co";
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!SERVICE_ROLE_KEY) {
+  console.error("❌ SUPABASE_SERVICE_ROLE_KEY is not set. Run: export SUPABASE_SERVICE_ROLE_KEY=<your-key>");
+  process.exit(1);
+}
 const ADMIN_USER_ID = "6feacf74-729b-4a88-8fa6-33b37a661986";
 
 const headers = {

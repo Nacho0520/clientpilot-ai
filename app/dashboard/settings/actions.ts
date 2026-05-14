@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-export async function saveBusinessSettings(fd: FormData) {
+export async function saveBusinessInfo(fd: FormData) {
   const supa = await createClient();
   const { data: { user } } = await supa.auth.getUser();
   if (!user) return;
@@ -14,16 +14,27 @@ export async function saveBusinessSettings(fd: FormData) {
     name: fd.get("name") as string,
     phone: fd.get("phone") as string,
     address: fd.get("address") as string,
-    google_maps_url: fd.get("google_maps_url") as string || null,
+    google_maps_url: (fd.get("google_maps_url") as string) || null,
   }).eq("id", biz.id);
+
+  revalidatePath("/dashboard/settings");
+}
+
+export async function saveAISettings(fd: FormData) {
+  const supa = await createClient();
+  const { data: { user } } = await supa.auth.getUser();
+  if (!user) return;
+
+  const { data: biz } = await supa.from("businesses").select("id").eq("owner_id", user.id).single();
+  if (!biz) return;
 
   await supa.from("business_settings").upsert({
     business_id: biz.id,
     ai_name: fd.get("ai_name") as string,
     tone: fd.get("tone") as string,
-    custom_instructions: fd.get("custom_instructions") as string || null,
-    review_link_url: fd.get("review_link_url") as string || null,
-    notification_email: fd.get("notification_email") as string || null,
+    custom_instructions: (fd.get("custom_instructions") as string) || null,
+    review_link_url: (fd.get("review_link_url") as string) || null,
+    notification_email: (fd.get("notification_email") as string) || null,
   }, { onConflict: "business_id" });
 
   revalidatePath("/dashboard/settings");

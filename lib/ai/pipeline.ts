@@ -20,7 +20,7 @@ export type PipelineResult =
   | { ok: false; reason: "no_business" | "billing_inactive" | "plan_limit_reached" | "error"; replyText?: string };
 
 const PLAN_LIMIT_FALLBACK_ES =
-  "Gracias por tu mensaje. Nuestro equipo te responderá personalmente en cuanto sea posible.";
+  "Hola, en este momento hemos alcanzado el límite de respuestas automáticas del mes. Nos pondremos en contacto contigo personalmente en breve. Disculpa las molestias.";
 
 const BILLING_INACTIVE_FALLBACK_ES =
   "Gracias por tu mensaje. En este momento nuestro asistente no está disponible. Contacta con nosotros directamente y te atenderemos enseguida.";
@@ -55,33 +55,31 @@ export async function runInboundPipeline(m: IncomingMessage): Promise<PipelineRe
     return { ok: false, reason: "billing_inactive", replyText: BILLING_INACTIVE_FALLBACK_ES };
   }
 
-  // Conversation: upsert by (business_id, customer_phone).
-  let { data: convo } = await supa
+  // Conversation: upsert by (business_id, customer_phone) to avoid race conditions
+  // when two simultaneous inbound messages from the same customer both try to INSERT.
+  const { data: convo } = await supa
     .from("conversations")
-    .select("*")
-    .eq("business_id", business.id)
-    .eq("customer_phone", customerPhone)
-    .maybeSingle();
-
-  if (!convo) {
-    const ins = await supa
-      .from("conversations")
-      .insert({
+    .upsert(
+      {
         business_id: business.id,
         customer_phone: customerPhone,
         customer_name: m.profileName ?? null,
         status: "active",
         last_message_at: new Date().toISOString(),
-      })
-      .select("*")
-      .single();
-    convo = ins.data;
+      },
+      { onConflict: "business_id,customer_phone" }
+    )
+    .select("*")
+    .single();
+  if (!convo) return { ok: false, reason: "error" };
 
-    // Notify business owner of new lead
+  // Notify business owner only when the conversation was just created (created_at within last 3 s).
+  const isNewConversation = Date.now() - new Date(convo.created_at).getTime() < 3000;
+  if (isNewConversation) {
     const bizSettings = Array.isArray(business.business_settings)
       ? business.business_settings[0]
       : business.business_settings;
-    if (convo && bizSettings?.notification_email) {
+    if (bizSettings?.notification_email) {
       sendNewLeadNotification({
         to: bizSettings.notification_email,
         businessName: business.name,
@@ -90,17 +88,15 @@ export async function runInboundPipeline(m: IncomingMessage): Promise<PipelineRe
         conversationId: convo.id,
       }).catch(() => {});
     }
-  } else if (m.profileName && !convo.customer_name) {
-    await supa.from("conversations").update({ customer_name: m.profileName }).eq("id", convo.id);
-    convo.customer_name = m.profileName;
   }
-  if (!convo) return { ok: false, reason: "error" };
 
   // Slot selection interception: if the customer replies 1/2/3 and we have pending slots.
   const trimmed = m.body.trim();
   if (convo.pending_slots && /^[123]$/.test(trimmed)) {
     const idx = parseInt(trimmed, 10) - 1;
-    const slots: string[] = convo.pending_slots as string[];
+    const slots: string[] = Array.isArray(convo.pending_slots)
+      ? (convo.pending_slots as unknown[]).filter((s): s is string => typeof s === "string")
+      : [];
     if (slots[idx]) {
       const appt = await createAppointment({
         businessId: business.id,

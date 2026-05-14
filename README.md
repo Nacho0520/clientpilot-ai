@@ -25,11 +25,11 @@ Tu recepcionista IA para WhatsApp — diseñada para clínicas estéticas y dent
 - Vercel: conecta el repo en el dashboard para despliegues automáticos por push.
 
 ## Module Status
-- [x] Module 1 — Core Infrastructure
-- [ ] Module 2 — WhatsApp Webhook + AI Response Engine
-- [ ] Module 3 — Appointment Scheduling
-- [ ] Module 4 — Follow-up Automation
-- [ ] Module 5 — Business Dashboard
-- [ ] Module 6 — Onboarding Flow
-- [ ] Module 7 — Stripe Billing
-- [ ] Module 8 — Landing Page
+- [x] Module 1 — Core Infrastructure (Supabase schema, env validation, Stripe webhook plumbing, BullMQ queues)
+- [x] Module 2 — WhatsApp Webhook + AI Response Engine (Twilio + Meta inbound handlers, Claude intent → reply pipeline)
+- [x] Module 3 — Appointment Scheduling (Google Calendar OAuth, slot proposals, appointment creation via `lib/calendar/booking.ts`)
+- [x] Module 4 — Follow-up Automation (BullMQ worker scans + sends due follow-ups, reminders, review requests)
+- [x] Module 5 — Business Dashboard (conversations, contacts, appointments, analytics, settings pages)
+- [x] Module 6 — Onboarding Flow (multi-step wizard at `app/onboarding/`, business profile creation)
+- [x] Module 7 — Stripe Billing (plans: starter / pro / clinic, checkout, portal, invoice webhook resets AI counter)
+- [x] Module 8 — Landing Page (marketing page at `app/page.tsx` with pricing, features, CTA)

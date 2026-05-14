@@ -22,11 +22,19 @@ export function IntegrationStatus({
   whatsappConfigured,
   billingActive,
   plan,
+  googleOauthInvalid,
+  usagePercent,
+  planLimit,
+  aiResponsesThisMonth,
 }: {
   calendarConnected: boolean;
   whatsappConfigured: boolean;
   billingActive: boolean;
   plan: string;
+  googleOauthInvalid?: boolean;
+  usagePercent?: number;
+  planLimit?: number | null;
+  aiResponsesThisMonth?: number;
 }) {
   const items: IntegrationItem[] = [
     {
@@ -59,6 +67,27 @@ export function IntegrationStatus({
         ? undefined
         : { label: "Gestionar plan", href: "/dashboard/billing" },
     },
+    ...(googleOauthInvalid
+      ? [
+          {
+            label: "Google Calendar (token)",
+            status: "error" as Status,
+            detail:
+              "Tu conexión con Google Calendar ha expirado. Reconecta para que la IA pueda proponer citas.",
+            action: { label: "Reconectar ahora", href: "/api/google/connect" },
+          },
+        ]
+      : []),
+    ...(usagePercent !== undefined && planLimit != null && usagePercent >= 80
+      ? [
+          {
+            label: "Límite de respuestas IA",
+            status: "warn" as Status,
+            detail: `Has usado el ${Math.round(usagePercent)}% de tus respuestas IA este mes (${aiResponsesThisMonth ?? 0}/${planLimit}). Considera subir de plan para no interrumpir el servicio.`,
+            action: { label: "Ver planes", href: "/dashboard/billing" },
+          },
+        ]
+      : []),
   ];
 
   const hasIssues = items.some((i) => i.status !== "ok");

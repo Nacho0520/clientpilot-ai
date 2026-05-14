@@ -21,21 +21,34 @@ export async function proposeSlotsForConversation(
   }
 
   const { data: hours } = await supa.from("business_hours").select("*").eq("business_id", convo.business_id);
-  const cal = calendarClientFromTokens(business.google_oauth_tokens_encrypted);
 
   const now = new Date();
-  const horizonEnd = addDays(now, 7);
-  const fb = await cal.freebusy.query({
-    requestBody: {
-      timeMin: now.toISOString(),
-      timeMax: horizonEnd.toISOString(),
-      items: [{ id: "primary" }],
-    },
-  });
-  const busy = (fb.data.calendars?.primary?.busy ?? []).map((b) => ({
-    start: new Date(b.start!),
-    end: new Date(b.end!),
-  }));
+  let busy: { start: Date; end: Date }[] = [];
+  try {
+    const cal = calendarClientFromTokens(business.google_oauth_tokens_encrypted);
+    const horizonEnd = addDays(now, 7);
+    const fb = await cal.freebusy.query({
+      requestBody: {
+        timeMin: now.toISOString(),
+        timeMax: horizonEnd.toISOString(),
+        items: [{ id: "primary" }],
+      },
+    });
+    busy = (fb.data.calendars?.primary?.busy ?? []).map((b) => ({
+      start: new Date(b.start!),
+      end: new Date(b.end!),
+    }));
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/invalid_grant|token has been expired or revoked/i.test(msg)) {
+      await supa
+        .from("businesses")
+        .update({ google_oauth_invalid: true })
+        .eq("id", business.id);
+      return { text: "He registrado tu interés. Un miembro del equipo te confirmará un hueco en breve.", slots: [] };
+    }
+    throw err;
+  }
 
   const slots: Date[] = [];
   const slotDurationMin = 30;

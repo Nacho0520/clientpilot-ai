@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ActivityChart } from "@/components/dashboard/activity-chart";
 import { IntegrationStatus } from "@/components/dashboard/integration-status";
 import { subDays, format } from "date-fns";
+import { PLAN_LIMITS } from "@/lib/env";
 
 function fmtEuros(c: number) { return `${(c / 100).toFixed(2)} €`; }
 
@@ -11,7 +12,7 @@ export default async function DashboardOverview() {
   const { data: { user } } = await supa.auth.getUser();
   const { data: biz } = await supa
     .from("businesses")
-    .select("id, name, plan, ai_responses_this_month, google_oauth_tokens_encrypted, twilio_whatsapp_number, meta_phone_number_id, whatsapp_provider, billing_active")
+    .select("id, name, plan, ai_responses_this_month, google_oauth_tokens_encrypted, google_oauth_invalid, twilio_whatsapp_number, meta_phone_number_id, whatsapp_provider, billing_active")
     .eq("owner_id", user!.id)
     .single();
 
@@ -59,6 +60,13 @@ export default async function DashboardOverview() {
     : !!biz.meta_phone_number_id;
   const billingActive = biz.billing_active !== false;
 
+  const plan = (biz.plan ?? "starter") as keyof typeof PLAN_LIMITS;
+  const rawLimit = PLAN_LIMITS[plan];
+  const planLimit = Number.isFinite(rawLimit) ? rawLimit : null;
+  const usagePercent = planLimit !== null
+    ? (biz.ai_responses_this_month / planLimit) * 100
+    : 0;
+
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold">Resumen — últimos 30 días</h1>
@@ -68,6 +76,10 @@ export default async function DashboardOverview() {
         whatsappConfigured={whatsappConfigured}
         billingActive={billingActive}
         plan={biz.plan ?? "starter"}
+        googleOauthInvalid={biz.google_oauth_invalid ?? false}
+        usagePercent={usagePercent}
+        planLimit={planLimit}
+        aiResponsesThisMonth={biz.ai_responses_this_month}
       />
       <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-5">
         <Card><CardHeader><CardDescription>Leads</CardDescription><CardTitle className="text-2xl">{leads ?? 0}</CardTitle></CardHeader></Card>
