@@ -86,7 +86,9 @@ La CLI requiere login interactivo la primera vez: `railway login`. Opcionalmente
 1. En la carpeta del repo: `railway init --name clientpilot-worker` (o crea el proyecto en la web y **New service → Empty** desde el mismo repo).
 2. Añade **Redis** al proyecto (plugin “Redis”); Railway inyecta `REDIS_URL` en el servicio que enlaces, o copia la URL manualmente en las variables del worker.
 3. Crea un servicio con **root directory** el repo. El build usa **`Dockerfile.worker`** (Node 22, `npm ci`, sin `next build`) y el arranque `npm run worker` (ver `railway.toml`).
-4. En **Variables** del servicio del worker, pega las mismas claves que necesita `lib/env.ts` (Supabase service role, Anthropic, Twilio, Redis, Resend, `TOKEN_ENCRYPTION_KEY`, `NEXT_PUBLIC_APP_URL` con la URL de Vercel, etc.).
+4. En **Variables** del servicio del worker, pega las mismas claves que necesita `lib/env.ts` (Supabase service role, Anthropic, Twilio, Redis, Resend, `TOKEN_ENCRYPTION_KEY`, `NEXT_PUBLIC_APP_URL` con la URL de Vercel, etc.).  
+   - `REDIS_URL`: ya puede estar como `${{Redis.REDIS_URL}}` si la enlazaste desde el servicio Redis.  
+   - Atajo: con `.env.local` completo, desde la raíz del repo: `bash scripts/railway-sync-env-from-local.sh` y luego `railway up --detach`.
 5. Despliega: `railway up` desde el repo o push si conectaste GitHub a Railway.
 
 Sin Redis y sin variables completas el worker **no arrancará** (`assertEnv()` en `workers/index.ts`).
