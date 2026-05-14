@@ -39,14 +39,19 @@ new Worker(
   { connection }
 );
 
-// Hourly repeating scan.
-await followUpsQueue.add(
-  "scan",
-  { trigger: "hourly_scan" },
-  { repeat: { pattern: "0 * * * *" } }
-);
+async function start() {
+  // Hourly repeating scan (tsx/CJS no soporta top-level await).
+  await followUpsQueue.add(
+    "scan",
+    { trigger: "hourly_scan" },
+    { repeat: { pattern: "0 * * * *" } }
+  );
+  // Keep process alive.
+  new QueueEvents("followups", { connection });
+  console.log("[worker] ClientPilot worker started");
+}
 
-// Keep process alive.
-new QueueEvents("followups", { connection });
-
-console.log("[worker] ClientPilot worker started");
+start().catch((err) => {
+  console.error("[worker] failed to start:", err);
+  process.exit(1);
+});

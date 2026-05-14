@@ -1,6 +1,5 @@
-# Railway deployment configuration for the BullMQ worker.
-# The Next.js app is deployed separately on Vercel.
-# This file configures the worker service on Railway.
+# Railway: solo el worker BullMQ (Next.js va en Vercel).
+# Build con Docker para no ejecutar `next build` en Railway (Nixpacks lo haría por defecto).
 #
 # Required env vars in the Railway service dashboard (see scripts/push-env-to-vercel.sh for the full list):
 #   ANTHROPIC_API_KEY, ANTHROPIC_MODEL
@@ -14,7 +13,8 @@
 #   NEXT_PUBLIC_APP_URL  (your Vercel production URL)
 
 [build]
-builder = "NIXPACKS"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.worker"
 
 [deploy]
 startCommand = "npm run worker"
