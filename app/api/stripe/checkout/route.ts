@@ -1,9 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { stripe, PRICE_IDS } from "@/lib/stripe";
+import { stripe, PRICE_IDS, isBillingEnabled } from "@/lib/stripe";
 import { env } from "@/lib/env";
 
 export async function POST(req: NextRequest) {
+  if (!isBillingEnabled) {
+    return NextResponse.json(
+      { error: "Facturación no configurada. Disponible próximamente." },
+      { status: 503 }
+    );
+  }
+
   const { plan } = (await req.json()) as { plan: "starter" | "pro" | "clinic" };
   const priceId = PRICE_IDS[plan];
   if (!priceId) return NextResponse.json({ error: "invalid plan" }, { status: 400 });

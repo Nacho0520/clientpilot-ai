@@ -147,7 +147,12 @@ export default function OnboardingWizard({ initialBusiness }: { initialBusiness:
         <Card>
           <CardHeader>
             <CardTitle>Datos de tu negocio</CardTitle>
-            <CardDescription>En 15 minutos tu recepcionista IA estará atendiendo WhatsApp.</CardDescription>
+            <CardDescription>
+              En 15 minutos tu recepcionista IA estará atendiendo WhatsApp.{" "}
+              <a href="/guia-preparacion" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+                ¿Qué necesito tener listo?
+              </a>
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -240,7 +245,15 @@ export default function OnboardingWizard({ initialBusiness }: { initialBusiness:
 
       {step === 4 && (
         <Card>
-          <CardHeader><CardTitle>Conecta WhatsApp</CardTitle><CardDescription>Tu IA recibirá y responderá mensajes de WhatsApp Business.</CardDescription></CardHeader>
+          <CardHeader>
+            <CardTitle>Conecta WhatsApp</CardTitle>
+            <CardDescription>
+              Tu IA recibirá y responderá mensajes de WhatsApp Business.{" "}
+              <a href="/guia-preparacion#whatsapp" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+                Ver guía completa →
+              </a>
+            </CardDescription>
+          </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <div className="space-y-2">
               <Label>Proveedor</Label>

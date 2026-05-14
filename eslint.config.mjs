@@ -16,6 +16,7 @@ const eslintConfig = [
       "node_modules/**",
       "next-env.d.ts",
       "package-lock.json",
+      "pnpm-lock.yaml",
     ],
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),

@@ -17,10 +17,13 @@ export type IncomingMessage = {
 
 export type PipelineResult =
   | { ok: true; replyText: string; conversationId: string; intent: Intent; appointmentRequested: boolean }
-  | { ok: false; reason: "no_business" | "plan_limit_reached" | "error"; replyText?: string };
+  | { ok: false; reason: "no_business" | "billing_inactive" | "plan_limit_reached" | "error"; replyText?: string };
 
 const PLAN_LIMIT_FALLBACK_ES =
   "Gracias por tu mensaje. Nuestro equipo te responderá personalmente en cuanto sea posible.";
+
+const BILLING_INACTIVE_FALLBACK_ES =
+  "Gracias por tu mensaje. En este momento nuestro asistente no está disponible. Contacta con nosotros directamente y te atenderemos enseguida.";
 
 /**
  * Full inbound message pipeline.
@@ -45,6 +48,12 @@ export async function runInboundPipeline(m: IncomingMessage): Promise<PipelineRe
   }
   const { data: business, error: bizErr } = await businessQuery.maybeSingle();
   if (bizErr || !business) return { ok: false, reason: "no_business" };
+
+  // Reject silently if the subscription was cancelled.
+  // billing_active defaults to true so existing businesses without the column are unaffected.
+  if (business.billing_active === false) {
+    return { ok: false, reason: "billing_inactive", replyText: BILLING_INACTIVE_FALLBACK_ES };
+  }
 
   // Conversation: upsert by (business_id, customer_phone).
   let { data: convo } = await supa

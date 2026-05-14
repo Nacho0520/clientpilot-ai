@@ -88,6 +88,14 @@ export function DashboardSidebar({
             <p className="mt-0.5 text-[11px] font-normal opacity-80">Respuestas ilimitadas</p>
           )}
         </div>
+        <Link
+          href="/guia-preparacion"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+        >
+          <span>📖</span> Guía de configuración
+        </Link>
         <div className="flex items-center justify-between">
           <form action="/api/auth/logout" method="post">
             <button className="text-xs text-muted-foreground hover:underline" type="submit">Cerrar sesión</button>

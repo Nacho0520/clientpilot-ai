@@ -35,7 +35,7 @@ const { data } = await supa.from("conversations").select("*").eq("customer_phone
 ## Type generation
 After any migration, run:
 ```bash
-npm run db:types
+pnpm run db:types
 # output: lib/supabase/database.types.ts
 ```
 Import generated types as needed; do not manually duplicate table shapes.

@@ -1,6 +1,7 @@
 "use server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { captureServerEvent, identifyServer } from "@/lib/posthog";
 
 type Args = {
   step: number;
@@ -156,11 +157,17 @@ export async function saveOnboardingWhatsApp(args: {
       "Save twilio number"
     );
   } else {
+    if (!args.metaPhoneNumberId || !/^\d{10,20}$/.test(args.metaPhoneNumberId.trim())) {
+      return { error: "Phone Number ID inválido. Debe ser un número de 10–20 dígitos." };
+    }
+    if (!args.metaWabaId || !/^\d{10,20}$/.test(args.metaWabaId.trim())) {
+      return { error: "WABA ID inválido. Debe ser un número de 10–20 dígitos." };
+    }
     assertSupabaseWrite(
       await admin.from("businesses").update({
         whatsapp_provider: "meta",
-        meta_phone_number_id: args.metaPhoneNumberId ?? null,
-        meta_waba_id: args.metaWabaId ?? null,
+        meta_phone_number_id: args.metaPhoneNumberId.trim(),
+        meta_waba_id: args.metaWabaId.trim(),
       }).eq("id", business.id),
       "Save meta config"
     );
@@ -177,4 +184,9 @@ export async function completeOnboarding() {
     await admin.from("businesses").update({ onboarding_complete: true }).eq("owner_id", user.id),
     "Complete onboarding"
   );
+  const { data: biz } = await admin.from("businesses").select("id, name, sector").eq("owner_id", user.id).maybeSingle();
+  if (biz) {
+    identifyServer(user.id, { email: user.email ?? "", business_name: biz.name, sector: biz.sector ?? "" });
+    captureServerEvent("onboarding_completed", user.id, { business_id: biz.id, sector: biz.sector ?? "" });
+  }
 }

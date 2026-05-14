@@ -10,7 +10,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 if ! command -v railway >/dev/null 2>&1; then
-  echo "Instala Railway CLI: npm i -g @railway/cli"
+  echo "Instala Railway CLI: pnpm add -g @railway/cli"
   exit 1
 fi
 
@@ -28,7 +28,7 @@ railway add --database redis || echo "(Si Redis ya existe, ignora el aviso anter
 echo ""
 echo "Siguientes pasos manuales en https://railway.app :"
 echo "  1. Crea o selecciona el servicio Node desde ESTE repo (root)."
-echo "  2. Start command: npm run worker (ya está en railway.toml)."
+echo "  2. Start command: pnpm run worker (ya está en railway.toml)."
 echo "  3. Variables: copia desde .env.example / lib/env.ts (mismas que el worker necesita)."
 echo "  4. REDIS_URL: Railway la inyecta al enlazar Redis al servicio, o pégala desde el plugin."
 echo "  5. Despliega: railway up"

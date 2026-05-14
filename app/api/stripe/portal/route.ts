@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { stripe } from "@/lib/stripe";
+import { stripe, isBillingEnabled } from "@/lib/stripe";
 import { env } from "@/lib/env";
 
 export async function POST() {
+  if (!isBillingEnabled) {
+    return NextResponse.json(
+      { error: "Facturación no configurada. Disponible próximamente." },
+      { status: 503 }
+    );
+  }
+
   const supa = await createClient();
   const { data: { user } } = await supa.auth.getUser();
   if (!user) return NextResponse.json({ error: "not authenticated" }, { status: 401 });

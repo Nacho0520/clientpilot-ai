@@ -1,5 +1,5 @@
 // Shared domain types. The generated Supabase types live in lib/supabase/database.types.ts
-// once `npm run db:types` is run against a local Supabase instance.
+// once `pnpm run db:types` is run against a local Supabase instance.
 
 export type Plan = "starter" | "pro" | "clinic";
 export type ConversationStatus = "active" | "lead" | "converted" | "closed" | "cold";

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ActivityChart } from "@/components/dashboard/activity-chart";
+import { IntegrationStatus } from "@/components/dashboard/integration-status";
 import { subDays, format } from "date-fns";
 
 function fmtEuros(c: number) { return `${(c / 100).toFixed(2)} €`; }
@@ -8,7 +9,11 @@ function fmtEuros(c: number) { return `${(c / 100).toFixed(2)} €`; }
 export default async function DashboardOverview() {
   const supa = await createClient();
   const { data: { user } } = await supa.auth.getUser();
-  const { data: biz } = await supa.from("businesses").select("id, name, plan, ai_responses_this_month").eq("owner_id", user!.id).single();
+  const { data: biz } = await supa
+    .from("businesses")
+    .select("id, name, plan, ai_responses_this_month, google_oauth_tokens_encrypted, twilio_whatsapp_number, meta_phone_number_id, whatsapp_provider, billing_active")
+    .eq("owner_id", user!.id)
+    .single();
 
   if (!biz) {
     return (
@@ -48,10 +53,23 @@ export default async function DashboardOverview() {
     return { day: dayStr, mensajes: count };
   });
 
+  const calendarConnected = !!biz.google_oauth_tokens_encrypted;
+  const whatsappConfigured = biz.whatsapp_provider === "twilio"
+    ? !!biz.twilio_whatsapp_number
+    : !!biz.meta_phone_number_id;
+  const billingActive = biz.billing_active !== false;
+
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold">Resumen — últimos 30 días</h1>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+
+      <IntegrationStatus
+        calendarConnected={calendarConnected}
+        whatsappConfigured={whatsappConfigured}
+        billingActive={billingActive}
+        plan={biz.plan ?? "starter"}
+      />
+      <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-5">
         <Card><CardHeader><CardDescription>Leads</CardDescription><CardTitle className="text-2xl">{leads ?? 0}</CardTitle></CardHeader></Card>
         <Card><CardHeader><CardDescription>Citas reservadas</CardDescription><CardTitle className="text-2xl">{appts ?? 0}</CardTitle></CardHeader></Card>
         <Card><CardHeader><CardDescription>Tiempo medio respuesta</CardDescription><CardTitle className="text-2xl">{avgSec ? `${avgSec}s` : "—"}</CardTitle></CardHeader></Card>

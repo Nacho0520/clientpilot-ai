@@ -104,6 +104,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-3">
             <a href="#demo" className="hidden text-sm text-muted-foreground hover:text-foreground sm:block">Demo</a>
             <a href="#pricing" className="hidden text-sm text-muted-foreground hover:text-foreground sm:block">Precios</a>
+            <Link href="/guia-preparacion" className="hidden text-sm text-muted-foreground hover:text-foreground sm:block">Guía</Link>
             <ThemeToggle />
             <Link href="/login"><Button size="sm">Entrar</Button></Link>
           </div>
@@ -267,6 +268,7 @@ export default function LandingPage() {
             <span>© 2026 ClientPilot AI</span>
           </div>
           <div className="flex gap-4">
+            <Link href="/guia-preparacion" className="hover:text-foreground">Guía de configuración</Link>
             <Link href="/privacy" className="hover:text-foreground">Política de privacidad</Link>
             <Link href="/terms" className="hover:text-foreground">Términos de servicio</Link>
           </div>

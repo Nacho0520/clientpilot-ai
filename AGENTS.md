@@ -33,7 +33,7 @@ Quick index for AI agents and new contributors. For full conventions see `.curso
 | Browser | `lib/supabase/client.ts` | Client Components |
 | Middleware | `lib/supabase/middleware.ts` | Session refresh only |
 | Migrations | `supabase/migrations/` | Sequential: `000N_description.sql` |
-| Type gen | `npm run db:types` | Outputs `lib/supabase/database.types.ts` |
+| Type gen | `pnpm run db:types` | Outputs `lib/supabase/database.types.ts` |
 
 ## API routes (webhooks)
 | Route | File |
@@ -45,15 +45,15 @@ Quick index for AI agents and new contributors. For full conventions see `.curso
 | Follow-up cron | `app/api/cron/followups/route.ts` |
 
 ## Background worker
-Start: `npm run worker` (runs `workers/index.ts` via tsx)
+Start: `pnpm run worker` (runs `workers/index.ts` via tsx)
 Queues: `followups` (hourly scan), `reminders` (pre-appointment), `reviews` (post-appointment)
 Requires Redis at `REDIS_URL`.
 
 ## Dev commands
 ```bash
-npm run dev          # Next.js dev server
-npm run worker       # BullMQ worker (separate terminal)
-npm run db:types     # Regenerate Supabase types
-supabase start       # Local Supabase stack
-supabase db push     # Apply pending migrations to local
+pnpm run dev          # Next.js dev server
+pnpm run worker       # BullMQ worker (separate terminal)
+pnpm run db:types     # Regenerate Supabase types
+pnpm exec supabase start   # Local Supabase stack
+pnpm exec supabase db push # Apply pending migrations to local
 ```

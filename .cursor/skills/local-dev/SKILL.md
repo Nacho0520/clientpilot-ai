@@ -11,15 +11,16 @@ description: >
 Starting from scratch, onboarding, after a `git pull` with new migrations, or diagnosing a broken local stack.
 
 ## Prerequisites
-- Node 20+, npm, Docker (for Supabase local)
-- `supabase` CLI installed globally
+- Node 20+, pnpm (vía `corepack enable`; versión en `package.json` → `packageManager`), Docker (for Supabase local)
+- `supabase` CLI (incluida como devDependency; usa `pnpm exec supabase …`)
 - Redis running locally or via Docker
 
 ## Steps
 
 ### 1. Install dependencies
 ```bash
-npm install
+corepack enable
+pnpm install
 ```
 
 ### 2. Configure environment
@@ -33,19 +34,19 @@ cp .env.example .env
 
 ### 3. Start Supabase
 ```bash
-supabase start
+pnpm exec supabase start
 # Outputs local URL + anon key + service_role key → copy to .env
 ```
 
 ### 4. Apply migrations
 ```bash
-supabase db push
+pnpm exec supabase db push
 # or: node scripts/migrate.mjs (direct pg approach)
 ```
 
 ### 5. Regenerate types (after any schema change)
 ```bash
-npm run db:types
+pnpm run db:types
 # Writes lib/supabase/database.types.ts
 ```
 
@@ -57,10 +58,10 @@ node scripts/seed.mjs
 ### 7. Start services (two terminals)
 ```bash
 # Terminal 1
-npm run dev
+pnpm run dev
 
 # Terminal 2 (BullMQ worker — needed for follow-ups/reminders/reviews)
-npm run worker
+pnpm run worker
 ```
 
 ### 8. Verify
@@ -73,6 +74,6 @@ npm run worker
 |---|---|
 | `Missing env vars: ...` at worker start | Run `assertEnv()` passes — fill missing `.env` values |
 | `connect ECONNREFUSED` on Redis | Start Redis: `docker run -p 6379:6379 redis` |
-| Types out of date after migration | `npm run db:types` |
-| Supabase already running | `supabase stop && supabase start` |
+| Types out of date after migration | `pnpm run db:types` |
+| Supabase already running | `pnpm exec supabase stop && pnpm exec supabase start` |
 | Google OAuth 400 on callback | `GOOGLE_OAUTH_REDIRECT_URI` must exactly match Google Console |

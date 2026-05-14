@@ -13,11 +13,11 @@ appointment booking via Google Calendar.
 
 ## Stack
 - **Framework**: Next.js 15 App Router, React 19, TypeScript strict
-- **Database**: Supabase (Postgres + Auth + RLS). Types generated via `npm run db:types`.
+- **Database**: Supabase (Postgres + Auth + RLS). Types generated via `pnpm run db:types`.
 - **AI**: Anthropic Claude (`ANTHROPIC_MODEL` env, default `claude-sonnet-4-5`)
 - **Messaging**: Twilio WhatsApp (primary) + Meta Cloud API (secondary, `meta_phone_number_id`)
 - **Queues**: BullMQ + IORedis. Three queues: `followups`, `reminders`, `reviews`
-- **Worker**: `workers/index.ts` — run separately with `npm run worker`
+- **Worker**: `workers/index.ts` — run separately with `pnpm run worker`
 - **Payments**: Stripe (plans: `starter` / `pro` / `clinic`)
 - **Email**: Resend
 - **Calendar**: Google Calendar OAuth (tokens encrypted at rest with `TOKEN_ENCRYPTION_KEY`)

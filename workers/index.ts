@@ -1,14 +1,32 @@
 /**
- * Long-running worker process. Run with: `npm run worker`.
+ * Long-running worker process. Run with: `pnpm run worker`.
  * - Hourly scan for new follow-up candidates + delivery of due follow-ups.
  * - Scheduled reminder + review request jobs.
  */
+import * as Sentry from "@sentry/node";
 import { Worker, QueueEvents } from "bullmq";
 import { connection, followUpsQueue } from "../lib/queue";
 import { scanForFollowUps, sendDueFollowUps, sendReminder, sendReviewRequest } from "../lib/followups";
-import { assertEnv } from "../lib/env";
+import { assertWorkerEnv, env } from "../lib/env";
 
-assertEnv();
+// Init Sentry before anything else so errors during boot are captured too.
+if (env.sentry.dsn) {
+  Sentry.init({
+    dsn: env.sentry.dsn,
+    environment: env.sentry.environment,
+    tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
+    beforeSend(event) {
+      // Strip any accidentally logged secrets.
+      if (event.extra) {
+        delete event.extra["SUPABASE_SERVICE_ROLE_KEY"];
+        delete event.extra["STRIPE_SECRET_KEY"];
+      }
+      return event;
+    },
+  });
+}
+
+assertWorkerEnv();
 
 new Worker(
   "followups",
@@ -52,6 +70,7 @@ async function start() {
 }
 
 start().catch((err) => {
+  Sentry.captureException(err);
   console.error("[worker] failed to start:", err);
   process.exit(1);
 });
