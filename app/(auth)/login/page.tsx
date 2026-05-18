@@ -40,8 +40,8 @@ function loginReducer(s: LoginState, a: LoginAction): LoginState { return { ...s
 
 function LoginContent() {
   const { push, refresh } = useRouter();
-  const { get: getParam } = useSearchParams();
-  const planParam = getParam("plan") ?? "";
+  const searchParams = useSearchParams();
+  const planParam = searchParams.get("plan") ?? "";
   const plan = PLAN_DETAILS[planParam];
 
   const [state, dispatch] = useReducer(loginReducer, {
