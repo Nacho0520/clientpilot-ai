@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import { sendWhatsApp } from "@/lib/whatsapp/index";
+import { auth } from "@/lib/auth";
+import { sendWhatsApp } from "@/lib/whatsapp/send";
 
 type ConversationBusiness = {
   businesses?: {
@@ -14,9 +14,7 @@ export async function sendManualMessage(fd: FormData) {
   const content = (fd.get("content") as string).trim();
   if (!content) return;
 
-  const supa = await createClient();
-  const { data: { user } } = await supa.auth.getUser();
-  if (!user) return;
+  const { user, supa } = await auth();
 
   const { data: convo } = await supa
     .from("conversations")

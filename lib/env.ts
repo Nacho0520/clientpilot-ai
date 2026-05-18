@@ -73,7 +73,7 @@ export const PLAN_LIMITS: Record<Plan, number> = {
  * Full env check for the Next.js app (webhooks, API routes).
  * Skips Stripe when BILLING_DISABLED=true.
  */
-export function assertEnv() {
+function assertEnv() {
   const required: (keyof typeof env)[] = [
     "supabaseUrl",
     "supabaseAnonKey",
@@ -86,8 +86,7 @@ export function assertEnv() {
 
   if (!env.billingDisabled) {
     const missingStripe = (["secret", "webhookSecret", "priceStarter", "pricePro", "priceClinic"] as const)
-      .filter((k) => env.stripe[k] === "")
-      .map((k) => `stripe.${k}`);
+      .reduce<string[]>((acc, k) => { if (env.stripe[k] === "") acc.push(`stripe.${k}`); return acc; }, []);
     missing.push(...(missingStripe as (keyof typeof env)[]));
   }
 

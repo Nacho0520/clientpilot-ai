@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import OnboardingWizard from "./wizard";
+
+export const metadata: Metadata = {
+  title: "Configuración inicial — ClientPilot AI",
+  description: "Configura tu recepcionista IA en WhatsApp en menos de 15 minutos.",
+};
 
 export default async function OnboardingPage() {
   const supa = await createClient();

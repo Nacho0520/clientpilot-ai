@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
+import { fmtAppointment } from "@/lib/format-date";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,21 +28,19 @@ type AppointmentWithService = {
 };
 
 export default async function AppointmentsPage() {
-  const supa = await createClient();
-  const { data: { user } } = await supa.auth.getUser();
-  const { data: biz } = await supa.from("businesses").select("id").eq("owner_id", user!.id).single();
+  const { user, supa } = await auth();
   const { data: appts } = await supa
     .from("appointments")
-    .select("*, services(name)")
-    .eq("business_id", biz!.id)
+    .select("*, services(name), businesses!inner(owner_id)")
+    .eq("businesses.owner_id", user.id)
     .order("scheduled_at");
 
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-bold">Citas</h1>
+      <h1 className="mb-4 text-2xl font-semibold">Citas</h1>
       {!appts?.length && (
         <div className="flex flex-col items-center py-16 text-center text-muted-foreground">
-          <svg className="mb-4 h-12 w-12 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="mb-4 size-12 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           <p className="font-medium">Aún no hay citas reservadas</p>
@@ -55,7 +54,7 @@ export default async function AppointmentsPage() {
               <div className="min-w-0">
                 <CardTitle className="text-base">{a.customer_name ?? a.customer_phone}</CardTitle>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {new Date(a.scheduled_at).toLocaleString("es-ES", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  {fmtAppointment(a.scheduled_at)}
                   {" · "}{(a as AppointmentWithService).services?.name ?? "Servicio"} ({a.duration_minutes} min)
                 </p>
               </div>

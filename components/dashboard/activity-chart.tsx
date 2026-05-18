@@ -1,16 +1,11 @@
 "use client";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import dynamic from "next/dynamic";
+
+const ActivityChartInner = dynamic(
+  () => import("./activity-chart-inner"),
+  { ssr: false, loading: () => <div className="h-[200px] animate-pulse rounded bg-secondary/40" /> }
+);
 
 export function ActivityChart({ data }: { data: Array<{ day: string; mensajes: number }> }) {
-  return (
-    <ResponsiveContainer width="100%" height={200}>
-      <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-        <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-        <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
-        <Tooltip />
-        <Line type="monotone" dataKey="mensajes" strokeWidth={2} dot={false} className="stroke-primary" />
-      </LineChart>
-    </ResponsiveContainer>
-  );
+  return <ActivityChartInner data={data} />;
 }

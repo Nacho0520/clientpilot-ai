@@ -1,5 +1,5 @@
 import { createAdminClient } from "./supabase/admin";
-import { sendWhatsApp } from "./whatsapp/index";
+import { sendWhatsApp } from "./whatsapp/send";
 import type { Database } from "./supabase/database.types";
 
 const TEMPLATES = {
@@ -59,39 +59,39 @@ export async function scanForFollowUps() {
     .lte("last_message_at", cutoff);
 
   if (!candidates) return 0;
-  let queued = 0;
-  for (const c of candidates) {
-    if (c.follow_ups_sent >= 2) continue;
-    // Skip if conversation already has a confirmed appointment.
-    const { data: appt } = await supa
-      .from("appointments")
-      .select("id")
-      .eq("conversation_id", c.id)
-      .in("status", ["pending", "confirmed"])
-      .maybeSingle();
-    if (appt) continue;
+  const results = await Promise.all(
+    candidates
+      .map(async (c) => {
+        if (c.follow_ups_sent >= 2) return 0;
+        const [{ data: appt }, { data: pending }] = await Promise.all([
+          supa
+            .from("appointments")
+            .select("id")
+            .eq("conversation_id", c.id)
+            .in("status", ["pending", "confirmed"])
+            .maybeSingle(),
+          supa
+            .from("follow_up_queue")
+            .select("id")
+            .eq("conversation_id", c.id)
+            .eq("status", "pending")
+            .maybeSingle(),
+        ]);
+        if (appt || pending) return 0;
 
-    // Skip if already a pending follow-up for this convo.
-    const { data: pending } = await supa
-      .from("follow_up_queue")
-      .select("id")
-      .eq("conversation_id", c.id)
-      .eq("status", "pending")
-      .maybeSingle();
-    if (pending) continue;
-
-    const templates = ["follow_up_a", "follow_up_b", "follow_up_c"] as const;
-    const tpl = templates[Math.floor(Math.random() * templates.length)];
-    await supa.from("follow_up_queue").insert({
-      business_id: c.business_id,
-      conversation_id: c.id,
-      scheduled_at: new Date().toISOString(),
-      template_type: tpl,
-      status: "pending",
-    });
-    queued++;
-  }
-  return queued;
+        const templates = ["follow_up_a", "follow_up_b", "follow_up_c"] as const;
+        const tpl = templates[Math.floor(Math.random() * templates.length)];
+        await supa.from("follow_up_queue").insert({
+          business_id: c.business_id,
+          conversation_id: c.id,
+          scheduled_at: new Date().toISOString(),
+          template_type: tpl,
+          status: "pending",
+        });
+        return 1;
+      })
+  );
+  return results.reduce<number>((sum, n) => sum + n, 0);
 }
 
 /** Send all pending follow-ups whose scheduled_at <= now. */
@@ -104,52 +104,51 @@ export async function sendDueFollowUps() {
     .lte("scheduled_at", new Date().toISOString())
     .limit(100);
   if (!due) return 0;
-  let sent = 0;
 
-  for (const item of (due ?? []) as FollowUpQueueItem[]) {
-    const convo = item.conversations;
-    if (!convo) continue;
-    const biz = convo.businesses;
-    if (!biz) continue;
-    const settings = Array.isArray(biz.business_settings) ? biz.business_settings[0] : biz.business_settings;
+  const results = await Promise.all(
+    (due as FollowUpQueueItem[]).map(async (item) => {
+      const convo = item.conversations;
+      if (!convo) return 0;
+      const biz = convo.businesses;
+      if (!biz) return 0;
+      const settings = Array.isArray(biz.business_settings) ? biz.business_settings[0] : biz.business_settings;
 
-    const body = (() => {
-      switch (item.template_type) {
-        case "follow_up_a":
-          return TEMPLATES.follow_up_a(convo.customer_name);
-        case "follow_up_b":
-          return TEMPLATES.follow_up_b(convo.customer_name);
-        case "follow_up_c":
-          return TEMPLATES.follow_up_c(convo.customer_name);
-        case "review_request":
-          return TEMPLATES.review_request(convo.customer_name, settings?.review_link_url ?? null);
-        default:
-          return null;
+      const body = (() => {
+        switch (item.template_type) {
+          case "follow_up_a": return TEMPLATES.follow_up_a(convo.customer_name);
+          case "follow_up_b": return TEMPLATES.follow_up_b(convo.customer_name);
+          case "follow_up_c": return TEMPLATES.follow_up_c(convo.customer_name);
+          case "review_request": return TEMPLATES.review_request(convo.customer_name, settings?.review_link_url ?? null);
+          default: return null;
+        }
+      })();
+      if (!body) return 0;
+
+      try {
+        await sendWhatsApp(convo.customer_phone, body, convo.business_id);
+        await Promise.all([
+          supa.from("messages").insert({
+            conversation_id: convo.id,
+            business_id: convo.business_id,
+            direction: "outbound",
+            content: body,
+            metadata: { source: "follow_up", template: item.template_type },
+          }),
+          supa.from("follow_up_queue").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", item.id),
+          supa.from("conversations").update({
+            follow_ups_sent: (convo.follow_ups_sent ?? 0) + 1,
+            last_message_at: new Date().toISOString(),
+          }).eq("id", convo.id),
+        ]);
+        return 1;
+      } catch (e) {
+        console.error("Follow-up send failed", e);
+        await supa.from("follow_up_queue").update({ status: "failed" }).eq("id", item.id);
+        return 0;
       }
-    })();
-    if (!body) continue;
-
-    try {
-      await sendWhatsApp(convo.customer_phone, body, convo.business_id);
-      await supa.from("messages").insert({
-        conversation_id: convo.id,
-        business_id: convo.business_id,
-        direction: "outbound",
-        content: body,
-        metadata: { source: "follow_up", template: item.template_type },
-      });
-      await supa.from("follow_up_queue").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", item.id);
-      await supa.from("conversations").update({
-        follow_ups_sent: (convo.follow_ups_sent ?? 0) + 1,
-        last_message_at: new Date().toISOString(),
-      }).eq("id", convo.id);
-      sent++;
-    } catch (e) {
-      console.error("Follow-up send failed", e);
-      await supa.from("follow_up_queue").update({ status: "failed" }).eq("id", item.id);
-    }
-  }
-  return sent;
+    })
+  );
+  return results.reduce<number>((sum, n) => sum + n, 0);
 }
 
 /** Send appointment reminder + persist outbound message. */

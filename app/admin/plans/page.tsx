@@ -30,7 +30,7 @@ export default async function AdminPlansPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Gestión de planes</h1>
+        <h1 className="text-2xl font-semibold">Gestión de planes</h1>
         <p className="text-muted-foreground mt-1">Distribución y métricas por plan</p>
       </div>
 
@@ -77,7 +77,7 @@ export default async function AdminPlansPage() {
               </div>
               <div className="flex justify-between border-t pt-2">
                 <span className="text-muted-foreground">MRR estimado</span>
-                <span className="font-bold text-primary">
+                <span className="font-semibold text-primary">
                   {(s.paying * PRICES[s.plan as keyof typeof PRICES]).toLocaleString("es-ES")} €
                 </span>
               </div>

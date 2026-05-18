@@ -30,7 +30,7 @@ export default function BillingPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Plan y facturación</h1>
+      <h1 className="mb-6 text-2xl font-semibold">Plan y facturación</h1>
 
       {BILLING_DISABLED && (
         <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">

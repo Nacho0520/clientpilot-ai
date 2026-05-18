@@ -1,5 +1,7 @@
 import { requireAdmin } from "@/lib/admin-guard";
 import { createAdminClient } from "@/lib/supabase/admin";
+import Link from "next/link";
+import { fmtDate } from "@/lib/format-date";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -31,14 +33,14 @@ export default async function AdminUsersPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Negocios registrados</h1>
+        <h1 className="text-2xl font-semibold">Negocios registrados</h1>
         <span className="text-sm text-muted-foreground">{businesses?.length ?? 0} resultados</span>
       </div>
 
       <form method="get" action="/admin/users" className="flex gap-2">
         <Input name="q" defaultValue={q ?? ""} placeholder="Buscar por nombre..." className="max-w-xs" />
         <button type="submit" className="rounded-md border px-3 py-2 text-sm hover:bg-secondary">Buscar</button>
-        {q && <a href="/admin/users" className="rounded-md border px-3 py-2 text-sm hover:bg-secondary">Limpiar</a>}
+        {q && <Link href="/admin/users" className="rounded-md border px-3 py-2 text-sm hover:bg-secondary">Limpiar</Link>}
       </form>
 
       <div className="space-y-2">
@@ -55,7 +57,7 @@ export default async function AdminUsersPage({
                   <p className="text-xs text-muted-foreground mt-1">
                     {b.phone && <span>{b.phone} · </span>}
                     {b.address && <span>{b.address} · </span>}
-                    Registro: {new Date(b.created_at).toLocaleDateString("es-ES")}
+                    Registro: {fmtDate(b.created_at)}
                   </p>
                   {b.stripe_customer_id && (
                     <p className="text-xs text-muted-foreground">Stripe: {b.stripe_customer_id}</p>

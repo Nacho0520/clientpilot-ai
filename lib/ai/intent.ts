@@ -19,12 +19,9 @@ export async function classifyIntent(message: string): Promise<Intent> {
     messages: [{ role: "user", content: message }],
   });
   const text = res.content
-    .filter((c): c is Anthropic.TextBlock => c.type === "text")
-    .map((c) => c.text)
-    .join("")
+    .reduce((acc, c) => (c.type === "text" ? acc + c.text : acc), "")
     .trim()
     .toLowerCase() as Intent;
   return INTENTS.includes(text) ? text : "unknown";
 }
 
-import type Anthropic from "@anthropic-ai/sdk";

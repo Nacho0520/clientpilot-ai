@@ -1,10 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import Link from "next/link";
 import { saveBusinessInfo, saveAISettings, saveService, deleteService, saveHours, saveWhatsAppNumberForm, saveMetaProviderForm } from "./actions";
 
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -24,19 +25,17 @@ type BusinessHour = {
 };
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ google?: string }> }) {
-  const { google } = await searchParams;
-  const supa = await createClient();
-  const { data: { user } } = await supa.auth.getUser();
+  const [{ google }, { user, supa }] = await Promise.all([searchParams, auth()]);
   const { data: biz } = await supa
     .from("businesses")
     .select("*, business_settings(*), services(*), business_hours(*)")
-    .eq("owner_id", user!.id)
+    .eq("owner_id", user.id)
     .single();
   const calendarConnected = !!biz?.google_oauth_tokens_encrypted;
   const settings = biz?.business_settings?.[0];
   return (
     <div className="space-y-8 max-w-2xl">
-      <h1 className="text-2xl font-bold">Ajustes</h1>
+      <h1 className="text-2xl font-semibold">Ajustes</h1>
 
       {google === "connected" && (
         <p className="rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800">
@@ -166,7 +165,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               const h = (biz?.business_hours as BusinessHour[] | undefined)?.find((x) => x.day_of_week === i);
               const closed = h?.closed ?? (i === 0);
               return (
-                <div key={i} className="flex items-center gap-3 text-sm">
+                <div key={day} className="flex items-center gap-3 text-sm">
                   <span className="w-24 shrink-0">{day}</span>
                   <label className="flex items-center gap-1">
                     <input
@@ -206,7 +205,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <CardContent className="space-y-6">
           {/* Twilio */}
           <div className="space-y-3">
-            <p className="text-sm font-medium">Opción A — Twilio</p>
+            <p className="text-sm font-medium">Opción A: Twilio</p>
             <form action={saveWhatsAppNumberForm} className="space-y-3">
               <div className="space-y-1">
                 <Label htmlFor="whatsapp_number">Número WhatsApp Twilio</Label>
@@ -231,7 +230,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
           {/* Meta Cloud API */}
           <div className="space-y-3">
-            <p className="text-sm font-medium">Opción B — Meta Cloud API</p>
+            <p className="text-sm font-medium">Opción B: Meta Cloud API</p>
             <form action={saveMetaProviderForm} className="space-y-3">
               <div className="space-y-1">
                 <Label htmlFor="meta_phone_number_id">Phone Number ID</Label>
@@ -272,7 +271,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <CardContent>
           {calendarConnected
             ? <Badge variant="success">Conectado</Badge>
-            : <a href="/api/google/connect"><Button>Conectar Google Calendar</Button></a>
+            : <Link href="/api/google/connect"><Button>Conectar Google Calendar</Button></Link>
           }
         </CardContent>
       </Card>

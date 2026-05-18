@@ -1,5 +1,5 @@
 "use client";
-import { useState, Suspense } from "react";
+import { useReducer, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -34,23 +34,25 @@ const BENEFITS = [
   { icon: Zap, text: "Lista en menos de 15 minutos" },
 ];
 
+type LoginState = { mode: "signin" | "signup"; email: string; password: string; err: string | null; busy: boolean; signupDone: boolean };
+type LoginAction = { type: "SET"; patch: Partial<LoginState> };
+function loginReducer(s: LoginState, a: LoginAction): LoginState { return { ...s, ...a.patch }; }
+
 function LoginContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const planParam = searchParams.get("plan") ?? "";
+  const { push, refresh } = useRouter();
+  const { get: getParam } = useSearchParams();
+  const planParam = getParam("plan") ?? "";
   const plan = PLAN_DETAILS[planParam];
 
-  const [mode, setMode] = useState<"signin" | "signup">(plan ? "signup" : "signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [signupDone, setSignupDone] = useState(false);
+  const [state, dispatch] = useReducer(loginReducer, {
+    mode: plan ? "signup" : "signin",
+    email: "", password: "", err: null, busy: false, signupDone: false,
+  });
+  const { mode, email, password, err, busy, signupDone } = state;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
-    setErr(null);
+    dispatch({ type: "SET", patch: { busy: true, err: null } });
     const supa = createClient();
 
     if (mode === "signup") {
@@ -59,17 +61,17 @@ function LoginContent() {
         password,
         options: { emailRedirectTo: `${window.location.origin}/onboarding` },
       });
-      setBusy(false);
-      if (error) return setErr(error.message);
-      setSignupDone(true);
+      dispatch({ type: "SET", patch: { busy: false } });
+      if (error) return dispatch({ type: "SET", patch: { err: error.message } });
+      dispatch({ type: "SET", patch: { signupDone: true } });
       return;
     }
 
     const { error } = await supa.auth.signInWithPassword({ email, password });
-    setBusy(false);
-    if (error) return setErr(error.message);
-    router.push("/dashboard");
-    router.refresh();
+    dispatch({ type: "SET", patch: { busy: false } });
+    if (error) return dispatch({ type: "SET", patch: { err: error.message } });
+    push("/dashboard");
+    refresh();
   }
 
   return (
@@ -78,37 +80,37 @@ function LoginContent() {
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-primary p-12 text-primary-foreground">
         <div>
           <div className="flex items-center gap-2 mb-12">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 text-sm font-bold">CP</div>
-            <span className="text-xl font-bold">ClientPilot AI</span>
+            <div className="flex size-8 items-center justify-center rounded-lg bg-white/20 text-sm font-semibold">CP</div>
+            <span className="text-xl font-semibold">ClientPilot AI</span>
           </div>
 
           {plan ? (
             <div>
               <Badge className="mb-4 bg-white/20 text-white border-white/30">Plan seleccionado</Badge>
-              <h1 className="text-4xl font-bold mb-2">{plan.name}</h1>
+              <h1 className="text-4xl font-semibold mb-2">{plan.name}</h1>
               <p className="text-3xl font-light mb-2 opacity-90">{plan.price}</p>
               <p className="text-primary-foreground/70 mb-8">{plan.highlight}</p>
               <ul className="space-y-3">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-white/80 shrink-0" />
+                    <CheckCircle className="size-5 text-white/80 shrink-0" />
                     <span>{f}</span>
                   </li>
                 ))}
               </ul>
               <div className="mt-8 rounded-xl bg-white/10 p-4 text-sm">
-                14 días gratis — sin tarjeta de crédito. Cancela cuando quieras.
+                14 días gratis, sin tarjeta de crédito. Cancela cuando quieras.
               </div>
             </div>
           ) : (
             <div>
-              <h1 className="text-4xl font-bold mb-4">Tu recepcionista IA en WhatsApp</h1>
+              <h1 className="text-4xl font-semibold mb-4">Tu recepcionista IA en WhatsApp</h1>
               <p className="text-xl opacity-80 mb-10">Responde, agenda y recupera clientes mientras tú te dedicas a lo importante.</p>
               <ul className="space-y-4">
                 {BENEFITS.map((b) => (
                   <li key={b.text} className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15">
-                      <b.icon className="h-4 w-4" />
+                    <div className="flex size-9 items-center justify-center rounded-full bg-white/15">
+                      <b.icon className="size-4" />
                     </div>
                     <span>{b.text}</span>
                   </li>
@@ -122,7 +124,7 @@ function LoginContent() {
           <div className="flex items-center gap-4">
             {[{ val: "1.200+", label: "clientes atendidos" }, { val: "98%", label: "satisfacción" }, { val: "< 8s", label: "tiempo de respuesta" }].map((s) => (
               <div key={s.label} className="flex-1 text-center">
-                <p className="text-2xl font-bold">{s.val}</p>
+                <p className="text-2xl font-semibold">{s.val}</p>
                 <p className="text-xs opacity-70">{s.label}</p>
               </div>
             ))}
@@ -135,14 +137,14 @@ function LoginContent() {
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
           <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold">CP</div>
-            <span className="font-bold">ClientPilot AI</span>
+            <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-semibold">CP</div>
+            <span className="font-semibold">ClientPilot AI</span>
           </div>
 
           {signupDone ? (
             <div className="text-center">
               <div className="text-5xl mb-4">📧</div>
-              <h2 className="text-2xl font-bold mb-2">Revisa tu email</h2>
+              <h2 className="text-2xl font-semibold mb-2">Revisa tu email</h2>
               <p className="text-muted-foreground text-sm mb-6">
                 Te hemos enviado un enlace de confirmación a <strong>{email}</strong>. Haz clic en él para activar tu cuenta y empezar.
               </p>
@@ -150,7 +152,7 @@ function LoginContent() {
             </div>
           ) : (
             <>
-              <h2 className="text-2xl font-bold mb-1">
+              <h2 className="text-2xl font-semibold mb-1">
                 {mode === "signin" ? "Bienvenido de vuelta" : plan ? `Empieza con el plan ${plan.name}` : "Crea tu cuenta"}
               </h2>
               <p className="text-muted-foreground text-sm mb-6">
@@ -161,7 +163,7 @@ function LoginContent() {
 
               {plan && mode === "signup" && (
                 <div className="mb-5 rounded-lg bg-primary/5 border border-primary/20 p-3 text-sm flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-primary shrink-0" />
+                  <CheckCircle className="size-4 text-primary shrink-0" />
                   <span>Incluye plan <strong>{plan.name}</strong> ({plan.price}) con 14 días gratis</span>
                 </div>
               )}
@@ -175,7 +177,7 @@ function LoginContent() {
                     required
                     placeholder="tu@clinica.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => dispatch({ type: "SET", patch: { email: e.target.value } })}
                   />
                 </div>
                 <div className="space-y-1">
@@ -194,7 +196,7 @@ function LoginContent() {
                     minLength={8}
                     placeholder={mode === "signup" ? "Mínimo 8 caracteres" : "••••••••"}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => dispatch({ type: "SET", patch: { password: e.target.value } })}
                   />
                   {mode === "signup" && password.length > 0 && password.length < 8 && (
                     <p className="text-xs text-amber-600">La contraseña debe tener al menos 8 caracteres</p>
@@ -228,7 +230,7 @@ function LoginContent() {
               <div className="mt-6 text-center">
                 <button
                   type="button"
-                  onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setErr(null); }}
+                  onClick={() => dispatch({ type: "SET", patch: { mode: mode === "signin" ? "signup" : "signin", err: null } })}
                   className="text-sm text-muted-foreground hover:text-foreground hover:underline"
                 >
                   {mode === "signin"

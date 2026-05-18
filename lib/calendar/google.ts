@@ -25,7 +25,7 @@ export type StoredTokens = { access_token: string; refresh_token: string; expiry
 export function encryptTokens(t: StoredTokens): string {
   return encrypt(JSON.stringify(t));
 }
-export function decryptTokens(s: string): StoredTokens {
+function decryptTokens(s: string): StoredTokens {
   return JSON.parse(decrypt(s));
 }
 

@@ -1,6 +1,7 @@
 import { addDays, addMinutes, format, isBefore, parse, startOfDay } from "date-fns";
 import { createAdminClient } from "../supabase/admin";
 import { calendarClientFromTokens } from "./google";
+import { remindersQueue, reviewsQueue } from "../queue";
 
 /** Look at the next 7 days, return up to 3 free slots that fit the business hours. */
 export async function proposeSlotsForConversation(
@@ -50,12 +51,13 @@ export async function proposeSlotsForConversation(
     throw err;
   }
 
+  const hoursByDay = new Map((hours ?? []).map((h) => [h.day_of_week, h]));
   const slots: Date[] = [];
   const slotDurationMin = 30;
   for (let d = 0; d < 7 && slots.length < 3; d++) {
     const day = startOfDay(addDays(now, d));
     const dow = day.getDay();
-    const h = hours?.find((x) => x.day_of_week === dow);
+    const h = hoursByDay.get(dow);
     if (!h || h.closed || !h.open_time || !h.close_time) continue;
     const open = parse(h.open_time, "HH:mm:ss", day);
     const close = parse(h.close_time, "HH:mm:ss", day);
@@ -140,5 +142,15 @@ export async function createAppointment(args: {
     .single();
 
   await supa.from("conversations").update({ status: "converted" }).eq("id", args.conversationId);
+
+  if (appt) {
+    const msUntilAppt = new Date(args.scheduledAt).getTime() - Date.now();
+    const reminderDelay = Math.max(0, msUntilAppt - 24 * 60 * 60 * 1000);
+    const reviewDelay = msUntilAppt + args.durationMinutes * 60 * 1000 + 2 * 60 * 60 * 1000;
+
+    await remindersQueue.add("reminder", { appointmentId: appt.id }, { delay: reminderDelay });
+    await reviewsQueue.add("review", { appointmentId: appt.id }, { delay: reviewDelay });
+  }
+
   return appt;
 }

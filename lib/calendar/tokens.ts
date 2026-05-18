@@ -23,7 +23,7 @@ import { encrypt, decrypt } from "@/lib/crypto";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
-export type IntegrationStatus = "active" | "revoked" | "expired";
+type IntegrationStatus = "active" | "revoked" | "expired";
 
 export interface GoogleTokens {
   access_token: string;
@@ -31,7 +31,7 @@ export interface GoogleTokens {
   expiry_date?: number;
 }
 
-export interface GoogleRefreshResponse {
+interface GoogleRefreshResponse {
   access_token: string;
   expires_in: number;
   token_type: string;
@@ -50,7 +50,7 @@ interface GoogleErrorResponse {
  * El caller debe capturar este error específico para mostrar el banner
  * de reconexión en el dashboard de la clínica.
  */
-export class GoogleRevokedError extends Error {
+class GoogleRevokedError extends Error {
   readonly businessId: string;
 
   constructor(businessId: string) {
@@ -107,7 +107,7 @@ export async function storeGoogleTokens(
  * @throws {GoogleRevokedError}  Si el usuario revocó el acceso en Google.
  * @throws {Error}               Para cualquier otro error de red o de BD.
  */
-export async function getValidAccessToken(businessId: string): Promise<string> {
+async function getValidAccessToken(businessId: string): Promise<string> {
   const supabase = createAdminClient();
 
   const { data: integration, error } = await supabase
@@ -229,7 +229,7 @@ async function refreshAccessToken(businessId: string): Promise<string> {
  * Comprueba si el negocio tiene Google Calendar conectado y activo.
  * Seguro para usar en Server Components (no expone tokens).
  */
-export async function hasActiveGoogleIntegration(
+async function hasActiveGoogleIntegration(
   businessId: string
 ): Promise<boolean> {
   const supabase = createAdminClient();
@@ -247,7 +247,7 @@ export async function hasActiveGoogleIntegration(
  * Marca manualmente una integración como revocada.
  * Útil para el botón "Desconectar Calendar" en el dashboard.
  */
-export async function disconnectGoogleIntegration(
+async function disconnectGoogleIntegration(
   businessId: string
 ): Promise<void> {
   const supabase = createAdminClient();

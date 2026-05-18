@@ -17,7 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="container flex items-center justify-between py-3">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold">CP</div>
+              <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold">CP</div>
               <span className="font-bold">Admin</span>
             </div>
             <nav className="flex gap-1 text-sm">

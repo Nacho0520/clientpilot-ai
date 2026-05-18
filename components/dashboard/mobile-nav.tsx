@@ -23,13 +23,13 @@ export function MobileNav({ bizName }: { bizName: string }) {
     <>
       <div className="flex items-center justify-between border-b px-4 py-3 md:hidden bg-background">
         <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-primary text-[10px] font-bold text-primary-foreground">CP</div>
+          <div className="flex size-6 items-center justify-center rounded bg-primary text-[10px] font-bold text-primary-foreground">CP</div>
           <span className="font-semibold text-sm">{bizName}</span>
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Button variant="ghost" size="icon" onClick={() => setOpen(!open)}>
-            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {open ? <X className="size-5" /> : <Menu className="size-5" />}
           </Button>
         </div>
       </div>

@@ -12,9 +12,9 @@ interface IntegrationItem {
 }
 
 function StatusIcon({ status }: { status: Status }) {
-  if (status === "ok") return <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />;
-  if (status === "warn") return <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />;
-  return <XCircle className="h-4 w-4 text-destructive shrink-0" />;
+  if (status === "ok") return <CheckCircle className="size-4 text-emerald-500 shrink-0" />;
+  if (status === "warn") return <AlertCircle className="size-4 text-amber-500 shrink-0" />;
+  return <XCircle className="size-4 text-destructive shrink-0" />;
 }
 
 export function IntegrationStatus({
@@ -98,14 +98,14 @@ export function IntegrationStatus({
     <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center gap-2">
-          <AlertCircle className="h-4 w-4 text-amber-500" />
+          <AlertCircle className="size-4 text-amber-500" />
           Acciones pendientes para que todo funcione
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        {items
-          .filter((i) => i.status !== "ok")
-          .map((item) => (
+        {items.reduce<React.ReactNode[]>((acc, item) => {
+          if (item.status === "ok") return acc;
+          acc.push(
             <div key={item.label} className="flex items-start gap-2 text-sm">
               <StatusIcon status={item.status} />
               <div className="flex-1">
@@ -121,7 +121,9 @@ export function IntegrationStatus({
                 )}
               </div>
             </div>
-          ))}
+          );
+          return acc;
+        }, [])}
       </CardContent>
     </Card>
   );

@@ -1,6 +1,4 @@
 import { anthropic, MODEL } from "../anthropic";
-import type Anthropic from "@anthropic-ai/sdk";
-
 type Msg = { role: "user" | "assistant"; content: string };
 
 export async function generateReply(systemPrompt: string, history: Msg[]): Promise<string> {
@@ -11,8 +9,6 @@ export async function generateReply(systemPrompt: string, history: Msg[]): Promi
     messages: history.map((m) => ({ role: m.role, content: m.content })),
   });
   return res.content
-    .filter((c): c is Anthropic.TextBlock => c.type === "text")
-    .map((c) => c.text)
-    .join("")
+    .reduce((acc, c) => (c.type === "text" ? acc + c.text : acc), "")
     .trim();
 }

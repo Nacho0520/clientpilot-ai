@@ -5,7 +5,7 @@ import { env } from "./env";
 export const isBillingEnabled = !env.billingDisabled && Boolean(env.stripe.secret);
 
 let _stripe: Stripe | null = null;
-export function getStripe(): Stripe {
+function getStripe(): Stripe {
   if (!isBillingEnabled) throw new Error("Stripe is not configured. Set BILLING_DISABLED=false and provide STRIPE_SECRET_KEY.");
   if (!_stripe) _stripe = new Stripe(env.stripe.secret, { apiVersion: "2025-02-24.acacia" });
   return _stripe;

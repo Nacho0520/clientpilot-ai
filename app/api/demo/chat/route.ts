@@ -1,7 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { anthropic, MODEL } from "@/lib/anthropic";
-import type Anthropic from "@anthropic-ai/sdk";
-
 // No server-side rate limiting is applied here. In-memory Maps reset on every
 // cold start and provide no protection in serverless deployments. Apply a
 // platform-level rate limiter (e.g. Vercel WAF or Upstash Ratelimit) before
@@ -32,9 +30,7 @@ export async function POST(req: NextRequest) {
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
     });
     const reply = res.content
-      .filter((c): c is Anthropic.TextBlock => c.type === "text")
-      .map((c) => c.text)
-      .join("")
+      .reduce((acc, c) => (c.type === "text" ? acc + c.text : acc), "")
       .trim();
     return NextResponse.json({ reply });
   } catch {

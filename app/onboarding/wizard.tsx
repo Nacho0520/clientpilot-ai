@@ -1,6 +1,7 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useReducer, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { saveOnboardingStep, completeOnboarding, saveOnboardingWhatsApp } from "./actions";
 
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+let svcCounter = 0;
 
 const STEPS = [
   { label: "Negocio", icon: "🏢" },
@@ -20,7 +22,7 @@ const STEPS = [
   { label: "¡Listo!", icon: "🎉" },
 ];
 
-type Service = { name: string; price: string; duration: string };
+type Service = { id: string; name: string; price: string; duration: string };
 type Hour = { day: number; open: string; close: string; closed: boolean };
 type InitialBusiness = {
   name?: string | null;
@@ -33,46 +35,70 @@ type InitialBusiness = {
   business_settings?: Array<{ ai_name: string | null; tone: string | null; custom_instructions: string | null }>;
 };
 
-export default function OnboardingWizard({ initialBusiness }: { initialBusiness: InitialBusiness | null }) {
-  const router = useRouter();
-  const [, start] = useTransition();
-  const [step, setStep] = useState(initialBusiness ? 1 : 0);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+type WizardState = {
+  step: number; saving: boolean; error: string | null;
+  name: string; phone: string; address: string; googleMapsUrl: string; sector: string;
+  services: Service[]; hours: Hour[];
+  aiName: string; tone: string; customInstr: string;
+  waProvider: "twilio" | "meta"; twilioNumber: string; metaPhoneNumberId: string; metaWabaId: string;
+};
+type WizardAction =
+  | { type: "SET"; patch: Partial<WizardState> }
+  | { type: "SET_HOURS"; fn: (prev: Hour[]) => Hour[] }
+  | { type: "SET_SERVICES"; fn: (prev: Service[]) => Service[] };
 
-  const [name, setName] = useState(initialBusiness?.name ?? "");
-  const [phone, setPhone] = useState(initialBusiness?.phone ?? "");
-  const [address, setAddress] = useState(initialBusiness?.address ?? "");
-  const [googleMapsUrl, setGoogleMapsUrl] = useState(initialBusiness?.google_maps_url ?? "");
-  const [sector, setSector] = useState(initialBusiness?.sector ?? "aesthetic_clinic");
+function wizardReducer(state: WizardState, action: WizardAction): WizardState {
+  switch (action.type) {
+    case "SET": return { ...state, ...action.patch };
+    case "SET_HOURS": return { ...state, hours: action.fn(state.hours) };
+    case "SET_SERVICES": return { ...state, services: action.fn(state.services) };
+  }
+}
 
-  const [services, setServices] = useState<Service[]>(
-    initialBusiness?.services?.map((s) => ({
+function initWizardState(initialBusiness: InitialBusiness | null): WizardState {
+  return {
+    step: initialBusiness ? 1 : 0,
+    saving: false,
+    error: null,
+    name: initialBusiness?.name ?? "",
+    phone: initialBusiness?.phone ?? "",
+    address: initialBusiness?.address ?? "",
+    googleMapsUrl: initialBusiness?.google_maps_url ?? "",
+    sector: initialBusiness?.sector ?? "aesthetic_clinic",
+    services: initialBusiness?.services?.map((s, i) => ({
+      id: `svc-${i}`,
       name: s.name,
       price: (s.price_cents / 100).toString(),
       duration: s.duration_minutes.toString(),
-    })) ?? [{ name: "", price: "", duration: "30" }]
-  );
-
-  const [hours, setHours] = useState<Hour[]>(
-    DAYS.map((_, i) => {
+    })) ?? [{ id: "svc-0", name: "", price: "", duration: "30" }],
+    hours: DAYS.map((_, i) => {
       const h = initialBusiness?.business_hours?.find((x) => x.day_of_week === i);
       return { day: i, open: h?.open_time?.slice(0, 5) ?? "09:00", close: h?.close_time?.slice(0, 5) ?? "19:00", closed: h?.closed ?? (i === 0) };
-    })
-  );
+    }),
+    aiName: initialBusiness?.business_settings?.[0]?.ai_name ?? "Sofía",
+    tone: initialBusiness?.business_settings?.[0]?.tone ?? "friendly",
+    customInstr: initialBusiness?.business_settings?.[0]?.custom_instructions ?? "",
+    waProvider: "twilio",
+    twilioNumber: "",
+    metaPhoneNumberId: "",
+    metaWabaId: "",
+  };
+}
 
-  const [aiName, setAiName] = useState(initialBusiness?.business_settings?.[0]?.ai_name ?? "Sofía");
-  const [tone, setTone] = useState(initialBusiness?.business_settings?.[0]?.tone ?? "friendly");
-  const [customInstr, setCustomInstr] = useState(initialBusiness?.business_settings?.[0]?.custom_instructions ?? "");
-
-  const [waProvider, setWaProvider] = useState<"twilio" | "meta">("twilio");
-  const [twilioNumber, setTwilioNumber] = useState("");
-  const [metaPhoneNumberId, setMetaPhoneNumberId] = useState("");
-  const [metaWabaId, setMetaWabaId] = useState("");
+export default function OnboardingWizard({ initialBusiness }: { initialBusiness: InitialBusiness | null }) {
+  const { push, refresh } = useRouter();
+  const [, start] = useTransition();
+  const [state, dispatch] = useReducer(wizardReducer, initialBusiness, initWizardState);
+  const {
+    step, saving, error,
+    name, phone, address, googleMapsUrl, sector,
+    services, hours,
+    aiName, tone, customInstr,
+    waProvider, twilioNumber, metaPhoneNumberId, metaWabaId,
+  } = state;
 
   async function next() {
-    setSaving(true);
-    setError(null);
+    dispatch({ type: "SET", patch: { saving: true, error: null } });
     start(async () => {
       try {
         if (step === 4) {
@@ -82,28 +108,28 @@ export default function OnboardingWizard({ initialBusiness }: { initialBusiness:
             metaPhoneNumberId: waProvider === "meta" ? metaPhoneNumberId : undefined,
             metaWabaId: waProvider === "meta" ? metaWabaId : undefined,
           });
-          if (res.error) { setError(res.error); setSaving(false); return; }
+          if (res.error) { dispatch({ type: "SET", patch: { error: res.error, saving: false } }); return; }
         } else {
           await saveOnboardingStep({ step, name, phone, address, sector, googleMapsUrl, services, hours, aiName, tone, customInstr });
         }
-        setStep((s) => Math.min(s + 1, STEPS.length - 1));
+        dispatch({ type: "SET", patch: { step: Math.min(step + 1, STEPS.length - 1) } });
       } catch (err) {
-        setError(err instanceof Error ? err.message : "No se pudo guardar el onboarding.");
+        dispatch({ type: "SET", patch: { error: err instanceof Error ? err.message : "No se pudo guardar el onboarding." } });
       } finally {
-        setSaving(false);
+        dispatch({ type: "SET", patch: { saving: false } });
       }
     });
   }
 
   async function finish() {
-    setError(null);
+    dispatch({ type: "SET", patch: { error: null } });
     start(async () => {
       try {
         await completeOnboarding();
-        router.push("/dashboard");
-        router.refresh();
+        push("/dashboard");
+        refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "No se pudo completar el onboarding.");
+        dispatch({ type: "SET", patch: { error: err instanceof Error ? err.message : "No se pudo completar el onboarding." } });
       }
     });
   }
@@ -129,9 +155,9 @@ export default function OnboardingWizard({ initialBusiness }: { initialBusiness:
         </div>
         {/* Step dots */}
         <div className="mt-3 flex justify-between">
-          {STEPS.map((s, i) => (
-            <div key={i} className={`flex flex-col items-center gap-1`}>
-              <div className={`h-2 w-2 rounded-full transition-colors ${i < step ? "bg-primary" : i === step ? "bg-primary ring-2 ring-primary/30" : "bg-secondary"}`} />
+          {STEPS.map((s, idx) => (
+            <div key={s.label} className={`flex flex-col items-center gap-1`}>
+              <div className={`h-2 w-2 rounded-full transition-colors ${idx < step ? "bg-primary" : idx === step ? "bg-primary ring-2 ring-primary/30" : "bg-secondary"}`} />
             </div>
           ))}
         </div>
@@ -149,21 +175,21 @@ export default function OnboardingWizard({ initialBusiness }: { initialBusiness:
             <CardTitle>Datos de tu negocio</CardTitle>
             <CardDescription>
               En 15 minutos tu recepcionista IA estará atendiendo WhatsApp.{" "}
-              <a href="/guia-preparacion" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+              <Link href="/guia-preparacion" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
                 ¿Qué necesito tener listo?
-              </a>
+              </Link>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2"><Label>Nombre del negocio *</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Clínica Bella" /></div>
-              <div className="space-y-2"><Label>Teléfono</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+34 600 000 000" /></div>
+              <div className="space-y-2"><Label>Nombre del negocio *</Label><Input value={name} onChange={(e) => dispatch({ type: "SET", patch: { name: e.target.value } })} placeholder="Clínica Bella" /></div>
+              <div className="space-y-2"><Label>Teléfono</Label><Input value={phone} onChange={(e) => dispatch({ type: "SET", patch: { phone: e.target.value } })} placeholder="+34 600 000 000" /></div>
             </div>
-            <div className="space-y-2"><Label>Dirección</Label><Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Calle Mayor 1, Madrid" /></div>
-            <div className="space-y-2"><Label>Enlace Google Maps (opcional)</Label><Input value={googleMapsUrl} onChange={(e) => setGoogleMapsUrl(e.target.value)} placeholder="https://maps.google.com/..." /></div>
+            <div className="space-y-2"><Label>Dirección</Label><Input value={address} onChange={(e) => dispatch({ type: "SET", patch: { address: e.target.value } })} placeholder="Calle Mayor 1, Madrid" /></div>
+            <div className="space-y-2"><Label>Enlace Google Maps (opcional)</Label><Input value={googleMapsUrl} onChange={(e) => dispatch({ type: "SET", patch: { googleMapsUrl: e.target.value } })} placeholder="https://maps.google.com/..." /></div>
             <div className="space-y-2">
               <Label>Sector</Label>
-              <select className="w-full rounded-md border bg-background p-2 text-sm" value={sector} onChange={(e) => setSector(e.target.value)}>
+              <select className="w-full rounded-md border bg-background p-2 text-sm" value={sector} onChange={(e) => dispatch({ type: "SET", patch: { sector: e.target.value } })}>
                 <option value="aesthetic_clinic">Clínica estética</option>
                 <option value="dental">Clínica dental</option>
                 <option value="other">Otro</option>
@@ -181,15 +207,18 @@ export default function OnboardingWizard({ initialBusiness }: { initialBusiness:
             <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground px-1">
               <span className="col-span-6">Servicio</span><span className="col-span-2 text-right">€</span><span className="col-span-2 text-right">Min</span>
             </div>
-            {services.map((s, i) => (
-              <div key={i} className="grid grid-cols-12 gap-2">
-                <Input className="col-span-6" placeholder="Limpieza facial" value={s.name} onChange={(e) => setServices(services.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} />
-                <Input className="col-span-2" type="number" placeholder="65" value={s.price} onChange={(e) => setServices(services.map((x, j) => j === i ? { ...x, price: e.target.value } : x))} />
-                <Input className="col-span-2" type="number" placeholder="45" value={s.duration} onChange={(e) => setServices(services.map((x, j) => j === i ? { ...x, duration: e.target.value } : x))} />
-                <Button variant="ghost" size="icon" className="col-span-2 text-muted-foreground" onClick={() => setServices(services.filter((_, j) => j !== i))}>×</Button>
+            {services.map((s) => (
+              <div key={s.id} className="grid grid-cols-12 gap-2">
+                <Input className="col-span-6" placeholder="Limpieza facial" value={s.name} onChange={(e) => dispatch({ type: "SET_SERVICES", fn: (prev) => prev.map((x) => x.id === s.id ? { ...x, name: e.target.value } : x) })} />
+                <Input className="col-span-2" type="number" placeholder="65" value={s.price} onChange={(e) => dispatch({ type: "SET_SERVICES", fn: (prev) => prev.map((x) => x.id === s.id ? { ...x, price: e.target.value } : x) })} />
+                <Input className="col-span-2" type="number" placeholder="45" value={s.duration} onChange={(e) => dispatch({ type: "SET_SERVICES", fn: (prev) => prev.map((x) => x.id === s.id ? { ...x, duration: e.target.value } : x) })} />
+                <Button variant="ghost" size="icon" className="col-span-2 text-muted-foreground" onClick={() => dispatch({ type: "SET_SERVICES", fn: (prev) => prev.filter((x) => x.id !== s.id) })}>×</Button>
               </div>
             ))}
-            <Button variant="outline" size="sm" onClick={() => setServices([...services, { name: "", price: "", duration: "30" }])}>+ Añadir servicio</Button>
+            <Button variant="outline" size="sm" onClick={() => {
+              const id = `svc-${++svcCounter}`;
+              dispatch({ type: "SET_SERVICES", fn: (prev) => [...prev, { id, name: "", price: "", duration: "30" }] });
+            }}>+ Añadir servicio</Button>
             <div className="pt-2">
               <Button onClick={next} disabled={!services.some((s) => s.name && s.price) || saving}>{saving ? "Guardando..." : "Continuar →"}</Button>
             </div>
@@ -201,16 +230,16 @@ export default function OnboardingWizard({ initialBusiness }: { initialBusiness:
         <Card>
           <CardHeader><CardTitle>Horario de atención</CardTitle><CardDescription>La IA usará este horario para responder preguntas sobre disponibilidad.</CardDescription></CardHeader>
           <CardContent className="space-y-2">
-            {hours.map((h, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <span className="w-24 text-sm shrink-0">{DAYS[i]}</span>
+            {hours.map((h) => (
+              <div key={h.day} className="flex items-center gap-3">
+                <span className="w-24 text-sm shrink-0">{DAYS[h.day]}</span>
                 <label className="flex items-center gap-1 text-sm">
-                  <input type="checkbox" checked={!h.closed} onChange={(e) => setHours(hours.map((x, j) => j === i ? { ...x, closed: !e.target.checked } : x))} />
+                  <input type="checkbox" checked={!h.closed} onChange={(e) => dispatch({ type: "SET_HOURS", fn: (prev) => prev.map((x) => x.day === h.day ? { ...x, closed: !e.target.checked } : x) })} />
                   Abierto
                 </label>
-                <Input type="time" className="w-28" disabled={h.closed} value={h.open} onChange={(e) => setHours(hours.map((x, j) => j === i ? { ...x, open: e.target.value } : x))} />
+                <Input type="time" className="w-28" disabled={h.closed} value={h.open} onChange={(e) => dispatch({ type: "SET_HOURS", fn: (prev) => prev.map((x) => x.day === h.day ? { ...x, open: e.target.value } : x) })} />
                 <span className="text-muted-foreground text-sm">–</span>
-                <Input type="time" className="w-28" disabled={h.closed} value={h.close} onChange={(e) => setHours(hours.map((x, j) => j === i ? { ...x, close: e.target.value } : x))} />
+                <Input type="time" className="w-28" disabled={h.closed} value={h.close} onChange={(e) => dispatch({ type: "SET_HOURS", fn: (prev) => prev.map((x) => x.day === h.day ? { ...x, close: e.target.value } : x) })} />
               </div>
             ))}
             <div className="pt-2"><Button onClick={next} disabled={saving}>{saving ? "Guardando..." : "Continuar →"}</Button></div>
@@ -223,17 +252,17 @@ export default function OnboardingWizard({ initialBusiness }: { initialBusiness:
           <CardHeader><CardTitle>Tu recepcionista IA</CardTitle><CardDescription>Personaliza cómo se presenta a tus clientes.</CardDescription></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2"><Label>Nombre de la recepcionista</Label><Input value={aiName} onChange={(e) => setAiName(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Nombre de la recepcionista</Label><Input value={aiName} onChange={(e) => dispatch({ type: "SET", patch: { aiName: e.target.value } })} /></div>
               <div className="space-y-2">
                 <Label>Tono</Label>
-                <select className="w-full rounded-md border bg-background p-2 text-sm" value={tone} onChange={(e) => setTone(e.target.value)}>
+                <select className="w-full rounded-md border bg-background p-2 text-sm" value={tone} onChange={(e) => dispatch({ type: "SET", patch: { tone: e.target.value } })}>
                   <option value="friendly">Cercano y amigable</option>
                   <option value="formal">Formal y profesional</option>
                   <option value="premium">Premium y exclusivo</option>
                 </select>
               </div>
             </div>
-            <div className="space-y-2"><Label>Instrucciones extra (opcional)</Label><Textarea value={customInstr} onChange={(e) => setCustomInstr(e.target.value)} placeholder="Ej.: Nunca prometas resultados médicos." /></div>
+            <div className="space-y-2"><Label>Instrucciones extra (opcional)</Label><Textarea value={customInstr} onChange={(e) => dispatch({ type: "SET", patch: { customInstr: e.target.value } })} placeholder="Ej.: Nunca prometas resultados médicos." /></div>
             <div className="rounded-lg border bg-secondary/50 p-4 text-sm">
               <p className="text-xs text-muted-foreground mb-1">Vista previa</p>
               <p className="italic">&quot;¡Hola! Soy <strong>{aiName}</strong> de {name || "tu clínica"}. ¿En qué puedo ayudarte?&quot;</p>
@@ -249,9 +278,9 @@ export default function OnboardingWizard({ initialBusiness }: { initialBusiness:
             <CardTitle>Conecta WhatsApp</CardTitle>
             <CardDescription>
               Tu IA recibirá y responderá mensajes de WhatsApp Business.{" "}
-              <a href="/guia-preparacion#whatsapp" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+              <Link href="/guia-preparacion#whatsapp" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
                 Ver guía completa →
-              </a>
+              </Link>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
@@ -260,7 +289,7 @@ export default function OnboardingWizard({ initialBusiness }: { initialBusiness:
               <select
                 className="w-full rounded-md border bg-background p-2 text-sm"
                 value={waProvider}
-                onChange={(e) => setWaProvider(e.target.value as "twilio" | "meta")}
+                onChange={(e) => dispatch({ type: "SET", patch: { waProvider: e.target.value as "twilio" | "meta" } })}
               >
                 <option value="twilio">Twilio (Sandbox o número propio)</option>
                 <option value="meta">Meta Cloud API (WhatsApp Business)</option>
@@ -276,7 +305,7 @@ export default function OnboardingWizard({ initialBusiness }: { initialBusiness:
                     id="twilio_number_step4"
                     placeholder="+34600000000"
                     value={twilioNumber}
-                    onChange={(e) => setTwilioNumber(e.target.value)}
+                    onChange={(e) => dispatch({ type: "SET", patch: { twilioNumber: e.target.value } })}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">Configura este webhook en Twilio → Messaging → WhatsApp → Senders:</p>
@@ -295,7 +324,7 @@ export default function OnboardingWizard({ initialBusiness }: { initialBusiness:
                     id="meta_phone_id_step4"
                     placeholder="123456789012345"
                     value={metaPhoneNumberId}
-                    onChange={(e) => setMetaPhoneNumberId(e.target.value)}
+                    onChange={(e) => dispatch({ type: "SET", patch: { metaPhoneNumberId: e.target.value } })}
                   />
                 </div>
                 <div className="space-y-1">
@@ -304,7 +333,7 @@ export default function OnboardingWizard({ initialBusiness }: { initialBusiness:
                     id="meta_waba_id_step4"
                     placeholder="987654321098765"
                     value={metaWabaId}
-                    onChange={(e) => setMetaWabaId(e.target.value)}
+                    onChange={(e) => dispatch({ type: "SET", patch: { metaWabaId: e.target.value } })}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">Configura este webhook en Meta → WhatsApp → Configuration:</p>
@@ -323,7 +352,7 @@ export default function OnboardingWizard({ initialBusiness }: { initialBusiness:
         <Card>
           <CardHeader><CardTitle>Conecta Google Calendar</CardTitle><CardDescription>Para que tu IA proponga huecos reales y confirme citas automáticamente.</CardDescription></CardHeader>
           <CardContent className="space-y-4">
-            <a href="/api/google/connect"><Button>Conectar Google Calendar</Button></a>
+            <Link href="/api/google/connect"><Button>Conectar Google Calendar</Button></Link>
             <p className="text-sm text-muted-foreground">Puedes saltarte este paso y conectarlo más tarde desde Ajustes.</p>
             <Button variant="outline" onClick={next}>Saltar por ahora →</Button>
           </CardContent>

@@ -1,11 +1,9 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
 
 export async function saveBusinessInfo(fd: FormData) {
-  const supa = await createClient();
-  const { data: { user } } = await supa.auth.getUser();
-  if (!user) return;
+  const { user, supa } = await auth();
 
   const { data: biz } = await supa.from("businesses").select("id").eq("owner_id", user.id).single();
   if (!biz) return;
@@ -21,9 +19,7 @@ export async function saveBusinessInfo(fd: FormData) {
 }
 
 export async function saveAISettings(fd: FormData) {
-  const supa = await createClient();
-  const { data: { user } } = await supa.auth.getUser();
-  if (!user) return;
+  const { user, supa } = await auth();
 
   const { data: biz } = await supa.from("businesses").select("id").eq("owner_id", user.id).single();
   if (!biz) return;
@@ -41,9 +37,8 @@ export async function saveAISettings(fd: FormData) {
 }
 
 export async function saveService(fd: FormData) {
-  const supa = await createClient();
-  const { data: { user } } = await supa.auth.getUser();
-  if (!user) return;
+  const { user, supa } = await auth();
+
   const { data: biz } = await supa.from("businesses").select("id").eq("owner_id", user.id).single();
   if (!biz) return;
 
@@ -66,9 +61,8 @@ export async function saveService(fd: FormData) {
 }
 
 export async function deleteService(id: string) {
-  const supa = await createClient();
-  const { data: { user } } = await supa.auth.getUser();
-  if (!user) return;
+  const { user, supa } = await auth();
+
   const { data: biz } = await supa.from("businesses").select("id").eq("owner_id", user.id).single();
   if (!biz) return;
   await supa.from("services").delete().eq("id", id).eq("business_id", biz.id);
@@ -76,17 +70,16 @@ export async function deleteService(id: string) {
 }
 
 export async function saveHours(fd: FormData) {
-  const supa = await createClient();
-  const { data: { user } } = await supa.auth.getUser();
-  if (!user) return;
+  const { user, supa } = await auth();
+
   const { data: biz } = await supa.from("businesses").select("id").eq("owner_id", user.id).single();
   if (!biz) return;
 
   const upserts = Array.from({ length: 7 }, (_, i) => ({
     business_id: biz.id,
     day_of_week: i,
-    open_time: fd.get(`open_time_${i}`) as string || null,
-    close_time: fd.get(`close_${i}`) as string || null,
+    open_time: (fd.get(`open_time_${i}`) as string) || null,
+    close_time: (fd.get(`close_${i}`) as string) || null,
     closed: fd.get(`open_${i}`) !== "true",
   }));
 
@@ -95,11 +88,34 @@ export async function saveHours(fd: FormData) {
 }
 
 export async function saveWhatsAppNumberForm(fd: FormData): Promise<void> {
-  await saveWhatsAppNumber(fd);
+  const number = (fd.get("whatsapp_number") as string)?.trim();
+  if (!number || !/^\+\d{7,15}$/.test(number)) return;
+
+  const { user, supa } = await auth();
+
+  const { data: biz } = await supa.from("businesses").select("id").eq("owner_id", user.id).single();
+  if (!biz) return;
+  await supa
+    .from("businesses")
+    .update({ twilio_whatsapp_number: number, whatsapp_provider: "twilio" })
+    .eq("id", biz.id);
+  revalidatePath("/dashboard/settings");
 }
 
 export async function saveMetaProviderForm(fd: FormData): Promise<void> {
-  await saveMetaProvider(fd);
+  const phoneNumberId = (fd.get("meta_phone_number_id") as string)?.trim();
+  const wabaId = (fd.get("meta_waba_id") as string)?.trim();
+  if (!phoneNumberId || !wabaId) return;
+
+  const { user, supa } = await auth();
+
+  const { data: biz } = await supa.from("businesses").select("id").eq("owner_id", user.id).single();
+  if (!biz) return;
+  await supa
+    .from("businesses")
+    .update({ whatsapp_provider: "meta", meta_phone_number_id: phoneNumberId, meta_waba_id: wabaId })
+    .eq("id", biz.id);
+  revalidatePath("/dashboard/settings");
 }
 
 export async function saveWhatsAppNumber(fd: FormData): Promise<{ error?: string; success?: boolean }> {
@@ -107,9 +123,9 @@ export async function saveWhatsAppNumber(fd: FormData): Promise<{ error?: string
   if (!number || !/^\+\d{7,15}$/.test(number)) {
     return { error: "Formato inválido. Usa +34XXXXXXXXX" };
   }
-  const supa = await createClient();
-  const { data: { user } } = await supa.auth.getUser();
-  if (!user) return { error: "No autenticado" };
+
+  const { user, supa } = await auth();
+
   const { data: biz } = await supa.from("businesses").select("id").eq("owner_id", user.id).single();
   if (!biz) return { error: "Negocio no encontrado" };
   const { error } = await supa
@@ -124,9 +140,9 @@ export async function saveWhatsAppNumber(fd: FormData): Promise<{ error?: string
 export async function saveMetaProvider(fd: FormData): Promise<{ error?: string; success?: boolean }> {
   const phoneNumberId = (fd.get("meta_phone_number_id") as string)?.trim();
   const wabaId = (fd.get("meta_waba_id") as string)?.trim();
-  const supa = await createClient();
-  const { data: { user } } = await supa.auth.getUser();
-  if (!user) return { error: "No autenticado" };
+
+  const { user, supa } = await auth();
+
   const { data: biz } = await supa.from("businesses").select("id").eq("owner_id", user.id).single();
   if (!biz) return { error: "Negocio no encontrado" };
   const { error } = await supa

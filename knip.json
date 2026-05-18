@@ -1,0 +1,14 @@
+{
+  "entry": [
+    "app/**/*.{ts,tsx}",
+    "workers/index.ts",
+    "scripts/*.mjs"
+  ],
+  "project": [
+    "**/*.{ts,tsx}",
+    "scripts/**/*.mjs"
+  ],
+  "ignore": [
+    "lib/supabase/database.types.ts"
+  ]
+}

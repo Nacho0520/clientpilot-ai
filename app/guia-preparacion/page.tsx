@@ -110,10 +110,10 @@ export default function GuiaPreparacionPage() {
       <nav className="border-b sticky top-0 z-10 bg-background/95 backdrop-blur">
         <div className="container flex items-center justify-between py-3">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-semibold">
               CP
             </div>
-            <span className="font-bold">ClientPilot AI</span>
+            <span className="font-semibold">ClientPilot AI</span>
           </Link>
           <div className="flex items-center gap-3">
             <ThemeToggle />
@@ -128,7 +128,7 @@ export default function GuiaPreparacionPage() {
       <section className="border-b bg-secondary/20 py-12">
         <div className="container max-w-3xl text-center">
           <Badge className="mb-4">Guía de configuración</Badge>
-          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
             Todo listo para empezar en 15 minutos
           </h1>
           <p className="mt-4 text-muted-foreground text-lg">
@@ -138,7 +138,7 @@ export default function GuiaPreparacionPage() {
           <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
             {["8 pasos", "~15 min", "Sin tarjeta al principio"].map((f) => (
               <span key={f} className="flex items-center gap-1.5">
-                <CheckCircle className="h-4 w-4 text-emerald-500" />
+                <CheckCircle className="size-4 text-emerald-500" />
                 {f}
               </span>
             ))}
@@ -152,7 +152,7 @@ export default function GuiaPreparacionPage() {
           <div key={step.n} className="flex gap-5">
             {/* Step number */}
             <div className="flex flex-col items-center">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-sm">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold text-sm">
                 {step.n}
               </div>
               {step.n < STEPS.length && (
@@ -173,21 +173,21 @@ export default function GuiaPreparacionPage() {
                 <>
                   {step.important && (
                     <div className="mb-3 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3 text-sm text-amber-800 dark:text-amber-300">
-                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <AlertCircle className="size-4 shrink-0 mt-0.5" />
                       <span>{step.important}</span>
                     </div>
                   )}
                   <ul className="space-y-2 text-sm text-muted-foreground">
-                    {step.items?.map((item, i) => (
-                      <li key={i} className="flex gap-2">
-                        <CheckCircle className="h-4 w-4 shrink-0 mt-0.5 text-emerald-500" />
+                    {step.items?.map((item) => (
+                      <li key={item} className="flex gap-2">
+                        <CheckCircle className="size-4 shrink-0 mt-0.5 text-emerald-500" />
                         <span>{item}</span>
                       </li>
                     ))}
                   </ul>
                   {step.tip && (
                     <div className="mt-3 flex gap-2 rounded-lg border bg-secondary/50 p-3 text-sm text-muted-foreground">
-                      <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                      <Info className="size-4 shrink-0 mt-0.5" />
                       <span>{step.tip}</span>
                     </div>
                   )}
@@ -201,7 +201,7 @@ export default function GuiaPreparacionPage() {
       {/* FAQ rápido */}
       <section className="border-t bg-secondary/20 py-12">
         <div className="container max-w-3xl">
-          <h2 className="text-2xl font-bold mb-6 text-center">Dudas frecuentes sobre la configuración</h2>
+          <h2 className="text-2xl font-semibold mb-6 text-center">Dudas frecuentes sobre la configuración</h2>
           <div className="space-y-3">
             {[
               {
@@ -242,7 +242,7 @@ export default function GuiaPreparacionPage() {
 
       {/* CTA */}
       <section className="container py-12 text-center">
-        <h2 className="text-2xl font-bold mb-3">¿Todo listo?</h2>
+        <h2 className="text-2xl font-semibold mb-3">¿Todo listo?</h2>
         <p className="text-muted-foreground mb-6">
           Empieza el asistente de alta ahora. En 15 minutos tu recepcionista IA estará activa.
         </p>
@@ -255,7 +255,7 @@ export default function GuiaPreparacionPage() {
       <footer className="border-t py-8">
         <div className="container flex flex-col items-center justify-between gap-3 text-sm text-muted-foreground md:flex-row">
           <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded bg-primary text-primary-foreground text-[10px] font-bold">CP</div>
+            <div className="flex size-6 items-center justify-center rounded bg-primary text-primary-foreground text-[10px] font-semibold">CP</div>
             <span>© 2026 ClientPilot AI</span>
           </div>
           <div className="flex gap-4">
@@ -291,9 +291,9 @@ function WhatsAppSection() {
               {[
                 "El número de WhatsApp que ClientPilot asignará a tu clínica (formato +34XXXXXXXXX).",
                 "Acceso al panel de Twilio para configurar la URL del webhook (te la mostramos en el asistente).",
-              ].map((item, i) => (
-                <li key={i} className="flex gap-1.5">
-                  <CheckCircle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-emerald-500" />
+              ].map((item) => (
+                <li key={item} className="flex gap-1.5">
+                  <CheckCircle className="size-3.5 shrink-0 mt-0.5 text-emerald-500" />
                   {item}
                 </li>
               ))}
@@ -319,9 +319,9 @@ function WhatsAppSection() {
                 "Phone Number ID de Meta (lo encuentras en Meta Business Suite → WhatsApp → Números de teléfono).",
                 "WABA ID (ID de la cuenta de WhatsApp Business, en la misma sección).",
                 "Acceso para configurar el webhook en Meta → WhatsApp → Configuración (URL que te mostramos).",
-              ].map((item, i) => (
-                <li key={i} className="flex gap-1.5">
-                  <CheckCircle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-emerald-500" />
+              ].map((item) => (
+                <li key={item} className="flex gap-1.5">
+                  <CheckCircle className="size-3.5 shrink-0 mt-0.5 text-emerald-500" />
                   {item}
                 </li>
               ))}
@@ -334,7 +334,7 @@ function WhatsAppSection() {
       </div>
 
       <div className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30 p-3 text-sm text-blue-800 dark:text-blue-300">
-        <Info className="h-4 w-4 shrink-0 mt-0.5" />
+        <Info className="size-4 shrink-0 mt-0.5" />
         <span>
           Si tienes dudas sobre cuál elegir, empieza con Twilio. Siempre puedes cambiar después desde
           Ajustes → WhatsApp.

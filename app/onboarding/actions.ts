@@ -1,5 +1,5 @@
 "use server";
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { captureServerEvent, identifyServer } from "@/lib/posthog";
 
@@ -39,9 +39,7 @@ function assertSupabaseWrite(
 }
 
 export async function saveOnboardingStep(args: Args) {
-  const supa = await createClient();
-  const { data: { user } } = await supa.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  const { user } = await auth();
 
   const admin = createAdminClient();
   const existingBusiness = await admin.from("businesses").select("*").eq("owner_id", user.id).maybeSingle();
@@ -94,14 +92,20 @@ export async function saveOnboardingStep(args: Args) {
       await admin.from("services").delete().eq("business_id", business.id),
       "Delete services"
     );
-    const rows = args.services
-      .filter((s) => s.name && s.price)
-      .map((s) => ({
-        business_id: business.id,
-        name: s.name,
-        price_cents: Math.round(parseFloat(s.price) * 100),
-        duration_minutes: parseInt(s.duration || "30", 10),
-      }));
+    const rows = args.services.reduce<Array<{ business_id: string; name: string; price_cents: number; duration_minutes: number }>>(
+      (acc, s) => {
+        if (s.name && s.price) {
+          acc.push({
+            business_id: business.id,
+            name: s.name,
+            price_cents: Math.round(parseFloat(s.price) * 100),
+            duration_minutes: parseInt(s.duration || "30", 10),
+          });
+        }
+        return acc;
+      },
+      []
+    );
     if (rows.length) {
       assertSupabaseWrite(await admin.from("services").insert(rows), "Create services");
     }
@@ -141,33 +145,35 @@ export async function saveOnboardingWhatsApp(args: {
   metaPhoneNumberId?: string;
   metaWabaId?: string;
 }): Promise<{ error?: string; success?: boolean }> {
-  const supa = await createClient();
-  const { data: { user } } = await supa.auth.getUser();
-  if (!user) return { error: "No autenticado" };
-  const admin = createAdminClient();
-  const { data: business } = await admin.from("businesses").select("id").eq("owner_id", user.id).maybeSingle();
-  if (!business) return { error: "Negocio no encontrado" };
-
-  if (args.provider === "twilio") {
-    if (!args.twilioNumber || !/^\+\d{7,15}$/.test(args.twilioNumber)) {
-      return { error: "Formato inválido. Usa +34XXXXXXXXX" };
-    }
-    assertSupabaseWrite(
-      await admin.from("businesses").update({ twilio_whatsapp_number: args.twilioNumber, whatsapp_provider: "twilio" }).eq("id", business.id),
-      "Save twilio number"
-    );
-  } else {
+  if (args.provider === "twilio" && (!args.twilioNumber || !/^\+\d{7,15}$/.test(args.twilioNumber))) {
+    return { error: "Formato inválido. Usa +34XXXXXXXXX" };
+  }
+  if (args.provider === "meta") {
     if (!args.metaPhoneNumberId || !/^\d{10,20}$/.test(args.metaPhoneNumberId.trim())) {
       return { error: "Phone Number ID inválido. Debe ser un número de 10–20 dígitos." };
     }
     if (!args.metaWabaId || !/^\d{10,20}$/.test(args.metaWabaId.trim())) {
       return { error: "WABA ID inválido. Debe ser un número de 10–20 dígitos." };
     }
+  }
+
+  const { user } = await auth();
+
+  const admin = createAdminClient();
+  const { data: business } = await admin.from("businesses").select("id").eq("owner_id", user.id).maybeSingle();
+  if (!business) return { error: "Negocio no encontrado" };
+
+  if (args.provider === "twilio") {
+    assertSupabaseWrite(
+      await admin.from("businesses").update({ twilio_whatsapp_number: args.twilioNumber!, whatsapp_provider: "twilio" }).eq("id", business.id),
+      "Save twilio number"
+    );
+  } else {
     assertSupabaseWrite(
       await admin.from("businesses").update({
         whatsapp_provider: "meta",
-        meta_phone_number_id: args.metaPhoneNumberId.trim(),
-        meta_waba_id: args.metaWabaId.trim(),
+        meta_phone_number_id: args.metaPhoneNumberId!.trim(),
+        meta_waba_id: args.metaWabaId!.trim(),
       }).eq("id", business.id),
       "Save meta config"
     );
@@ -176,9 +182,8 @@ export async function saveOnboardingWhatsApp(args: {
 }
 
 export async function completeOnboarding() {
-  const supa = await createClient();
-  const { data: { user } } = await supa.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  const { user } = await auth();
+
   const admin = createAdminClient();
   assertSupabaseWrite(
     await admin.from("businesses").update({ onboarding_complete: true }).eq("owner_id", user.id),

@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
+import { auth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ActivityChart } from "@/components/dashboard/activity-chart";
 import { IntegrationStatus } from "@/components/dashboard/integration-status";
@@ -8,19 +9,18 @@ import { PLAN_LIMITS } from "@/lib/env";
 function fmtEuros(c: number) { return `${(c / 100).toFixed(2)} €`; }
 
 export default async function DashboardOverview() {
-  const supa = await createClient();
-  const { data: { user } } = await supa.auth.getUser();
+  const { user, supa } = await auth();
   const { data: biz } = await supa
     .from("businesses")
     .select("id, name, plan, ai_responses_this_month, google_oauth_tokens_encrypted, google_oauth_invalid, twilio_whatsapp_number, meta_phone_number_id, whatsapp_provider, billing_active")
-    .eq("owner_id", user!.id)
+    .eq("owner_id", user.id)
     .single();
 
   if (!biz) {
     return (
       <div className="flex flex-col items-center py-16 text-center text-muted-foreground">
         <p className="font-medium">No se encontró ningún negocio asociado a tu cuenta.</p>
-        <p className="text-sm mt-1">Completa el proceso de <a href="/onboarding" className="underline">onboarding</a> para continuar.</p>
+        <p className="text-sm mt-1">Completa el proceso de <Link href="/onboarding" className="underline">onboarding</Link> para continuar.</p>
       </div>
     );
   }
@@ -69,7 +69,7 @@ export default async function DashboardOverview() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Resumen — últimos 30 días</h1>
+      <h1 className="mb-6 text-2xl font-semibold">Resumen: últimos 30 días</h1>
 
       <IntegrationStatus
         calendarConnected={calendarConnected}
@@ -91,7 +91,7 @@ export default async function DashboardOverview() {
 
       <div className="mt-6">
         <Card>
-          <CardHeader><CardTitle>Actividad — últimos 14 días</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Actividad: últimos 14 días</CardTitle></CardHeader>
           <CardContent>
             <ActivityChart data={chartData} />
           </CardContent>

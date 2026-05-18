@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/admin-guard";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fmtDate } from "@/lib/format-date";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { subDays } from "date-fns";
@@ -47,7 +48,7 @@ export default async function AdminOverview() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Panel de administración</h1>
+        <h1 className="text-3xl font-semibold">Panel de administración</h1>
         <p className="text-muted-foreground mt-1">Vista global de ClientPilot AI</p>
       </div>
 
@@ -102,7 +103,7 @@ export default async function AdminOverview() {
                 <div className="min-w-0">
                   <p className="font-medium truncate">{b.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(b.created_at).toLocaleDateString("es-ES")}
+                    {fmtDate(b.created_at)}
                     {!b.onboarding_complete && <span className="ml-2 text-amber-600">· Onboarding incompleto</span>}
                   </p>
                 </div>
@@ -125,7 +126,7 @@ export default async function AdminOverview() {
           <CardContent className="divide-y">
             {topActive?.map((b, idx) => (
               <div key={b.id} className="flex items-center gap-3 py-3">
-                <span className="text-lg font-bold text-muted-foreground w-6">#{idx + 1}</span>
+                <span className="text-lg font-semibold text-muted-foreground w-6">#{idx + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{b.name}</p>
                   <div className="mt-1 h-1.5 rounded-full bg-secondary">

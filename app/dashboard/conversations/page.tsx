@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { fmtDateTime } from "@/lib/format-date";
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "success" | "warn"> = {
   active: "default", lead: "warn", converted: "success", closed: "secondary", cold: "secondary",
@@ -16,13 +17,11 @@ export default async function ConversationsPage({
 }: {
   searchParams: Promise<{ status?: string; q?: string; page?: string }>;
 }) {
-  const { status, q, page: pageStr } = await searchParams;
+  const [{ status, q, page: pageStr }, { user, supa }] = await Promise.all([searchParams, auth()]);
   const page = Math.max(1, parseInt(pageStr ?? "1", 10));
   const from = (page - 1) * PAGE_SIZE;
 
-  const supa = await createClient();
-  const { data: { user } } = await supa.auth.getUser();
-  const { data: biz } = await supa.from("businesses").select("id").eq("owner_id", user!.id).single();
+  const { data: biz } = await supa.from("businesses").select("id").eq("owner_id", user.id).single();
 
   let query = supa
     .from("conversations")
@@ -48,7 +47,7 @@ export default async function ConversationsPage({
 
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-bold">Conversaciones</h1>
+      <h1 className="mb-4 text-2xl font-semibold">Conversaciones</h1>
 
       {/* Filters */}
       <div className="mb-4 flex flex-wrap gap-2">
@@ -77,7 +76,7 @@ export default async function ConversationsPage({
       {/* Results */}
       {!conversations?.length && (
         <div className="flex flex-col items-center py-16 text-center text-muted-foreground">
-          <svg className="mb-4 h-12 w-12 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="mb-4 size-12 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
           </svg>
           <p className="font-medium">No hay conversaciones {q ? `que coincidan con "${q}"` : "aún"}</p>
@@ -93,7 +92,7 @@ export default async function ConversationsPage({
                 <div className="min-w-0">
                   <CardTitle className="text-base truncate">{c.customer_name ?? c.customer_phone}</CardTitle>
                   <p className="text-xs text-muted-foreground">
-                    {c.customer_phone} · {new Date(c.last_message_at).toLocaleString("es-ES")}
+                    {c.customer_phone} · {fmtDateTime(c.last_message_at)}
                   </p>
                 </div>
                 <Badge variant={STATUS_VARIANT[c.status] ?? "default"}>{c.status}</Badge>

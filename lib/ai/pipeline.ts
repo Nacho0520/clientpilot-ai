@@ -107,12 +107,11 @@ export async function runInboundPipeline(m: IncomingMessage): Promise<PipelineRe
         scheduledAt: new Date(slots[idx]),
         durationMinutes: 30,
       });
-      await supa
-        .from("conversations")
-        .update({ pending_slots: null, pending_service_id: null })
-        .eq("id", convo.id);
-      const { format } = await import("date-fns");
-      const { es } = await import("date-fns/locale");
+      const [, { format }, { es }] = await Promise.all([
+        supa.from("conversations").update({ pending_slots: null, pending_service_id: null }).eq("id", convo.id),
+        import("date-fns"),
+        import("date-fns/locale"),
+      ]);
       const confirmText = `¡Perfecto! Tu cita está confirmada para el ${format(new Date(slots[idx]), "EEEE d 'de' LLLL 'a las' HH:mm", { locale: es })}.`;
       await supa.from("messages").insert({
         conversation_id: convo.id,

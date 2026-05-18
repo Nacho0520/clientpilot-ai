@@ -30,6 +30,23 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+// Legacy: mantiene sincronizado el campo google_oauth_tokens_encrypted mientras
+// booking.ts lo use directamente. TODO: migrar booking.ts a lib/calendar/tokens.ts.
+async function syncLegacyTokenField(businessId: string, tokens: StoredTokens) {
+  const supa = createAdminClient();
+  await supa
+    .from("businesses")
+    .update({
+      google_oauth_tokens_encrypted: encryptTokens({
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        expiry_date: tokens.expiry_date ?? undefined,
+      }),
+      google_oauth_invalid: false,
+    })
+    .eq("id", businessId);
+}
+
 export async function GET(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
   const url = new URL(req.url);
@@ -114,20 +131,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // ── Compatibilidad: actualizar también businesses.google_oauth_tokens_encrypted ──
-  // Mantener el campo legacy mientras booking.ts siga usándolo.
-  // TODO: migrar booking.ts a lib/calendar/tokens.ts y eliminar este bloque.
-  await supa
-    .from("businesses")
-    .update({
-      google_oauth_tokens_encrypted: encryptTokens({
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-        expiry_date: tokens.expiry_date ?? undefined,
-      }),
-      google_oauth_invalid: false,
-    })
-    .eq("id", businessId);
+  await syncLegacyTokenField(businessId, tokens);
 
   return NextResponse.redirect(
     new URL("/dashboard/settings?google=connected", appUrl)
